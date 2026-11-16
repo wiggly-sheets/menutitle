@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-16
+
 ### Added
 - The app now ships and runs as `MenuTitle` everywhere: SwiftPM target, executable, and process name in Activity Monitor.
 - The title hides while Mission Control or Exposé is on screen.
