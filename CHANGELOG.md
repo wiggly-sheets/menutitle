@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-16
+
 ### Added
 - Sidebar settings window with Appearance, Placement, Clicking, Title, Position, General, and Permissions panes.
 - Native font panel picker for family, style, and size, with the size slider kept in sync.
