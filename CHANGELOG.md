@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- An adjustable scroll speed for long titles, from 10 to 120 points per second.
+- Browser and profile name stripping now detects browsers at runtime, matches each app's own title suffix, and accepts a custom comma-separated suffix list.
 - The sketchybar app font is no longer assumed to be installed. MenuTitle downloads it on first launch, checks GitHub once a day when automatic updates are on, and has a manual **Check Now** button in Appearance.
 
 ## [1.1.0] - 2026-11-16
