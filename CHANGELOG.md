@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - The title no longer stays hidden after sleep, wake, or a login screen change. The panel is rebuilt on the active Space when macOS strands it on an old one.
+- The title reasserts itself if macOS orders the panel out or leaves it mid-fade, instead of waiting for the title to change.
+- A drag interrupted by sleep no longer leaves the title stuck.
 
 ## [1.1.1] - 2026-11-16
 

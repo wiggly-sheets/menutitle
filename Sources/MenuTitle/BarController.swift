@@ -97,6 +97,7 @@ final class BarController: NSObject {
 
     @objc private func systemDidWake() {
         observer.stop()
+        view.cancelInteraction()
         lastFrontPid = nil
         lastRenderKey = nil
         retryCount = 0
@@ -308,7 +309,7 @@ final class BarController: NSObject {
         ]
         let key = keyParts.joined(separator: "\u{1}")
 
-        guard key != lastRenderKey else { return }
+        guard key != lastRenderKey || !panel.isVisible || panel.alphaValue < 1 else { return }
         lastRenderKey = key
         currentInfo = info
 

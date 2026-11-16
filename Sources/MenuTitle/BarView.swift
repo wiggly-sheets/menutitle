@@ -120,6 +120,13 @@ final class BarView: NSView {
         updateScrolling()
     }
 
+    func cancelInteraction() {
+        isDragging = false
+        isPressed = false
+        mouseStart = nil
+        originStart = nil
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let content else { return }
 
