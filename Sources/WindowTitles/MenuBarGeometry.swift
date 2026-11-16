@@ -104,6 +104,30 @@ enum MenuBarGeometry {
         return false
     }
 
+    /// True while Mission Control or Exposé is on screen. WindowManager draws a
+    /// full-screen layer 19 shield in those modes and nothing on screen otherwise.
+    static func isMissionControlActive() -> Bool {
+        guard let windows = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else { return false }
+
+        let minWidth = (NSScreen.screens.map { $0.frame.width }.max() ?? 1710) * 0.5
+        let minHeight = (NSScreen.screens.map { $0.frame.height }.max() ?? 1112) * 0.5
+
+        for window in windows {
+            guard let layer = window[kCGWindowLayer as String] as? Int, layer == 19,
+                  let owner = window[kCGWindowOwnerPID as String] as? Int,
+                  NSRunningApplication(processIdentifier: pid_t(owner))?.bundleIdentifier == "com.apple.WindowManager",
+                  let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+                  let width = (bounds["Width"] as? NSNumber)?.doubleValue,
+                  let height = (bounds["Height"] as? NSNumber)?.doubleValue,
+                  width >= minWidth, height >= minHeight else { continue }
+            return true
+        }
+        return false
+    }
+
     /// Left edge of the first other menu-bar-level window that overlaps the
     /// region right of `afterX`. Catches overlays such as custom menu bar
     /// widgets that the system status items do not cover.

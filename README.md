@@ -50,6 +50,7 @@ The title moves as menus change width and stops before the notch or the next men
 - Updates instantly when the focused window or its title changes, with a 3-second poll as fallback.
 - Hides in native fullscreen spaces and when no titled window has focus.
 - Stays out of the way while a menu bar menu is open, then returns and keeps the front app focused.
+- Hides while Mission Control or Exposé is on screen, then returns when it closes.
 
 ### Fits around the menu bar
 

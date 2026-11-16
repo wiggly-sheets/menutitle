@@ -104,9 +104,10 @@ final class BarController: NSObject {
             ? panel.frame.minX...panel.frame.maxX
             : nil
         let open = hides && MenuBarGeometry.hasOpenMenu(pid: frontPid, overlappingX: range)
-        guard open != menuOpen else { return }
-        menuOpen = open
-        if open {
+        let hidden = open || MenuBarGeometry.isMissionControlActive()
+        guard hidden != menuOpen else { return }
+        menuOpen = hidden
+        if hidden {
             hide()
         } else {
             refresh()

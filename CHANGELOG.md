@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The title hides while Mission Control or Exposé is on screen.
 - Smooth app switches: the old title leaves before the new app's menus, and the new title fades in after the menu bar settles.
 - Short retries when yabai or the menu bar is still settling, so a temporary miss no longer hides the title until the next poll.
 - Custom text and background colors, background opacity, corner radius, and shape height inset. Padding now sets the top, bottom, left, and right space inside the background; link the four sides or set each one separately.
