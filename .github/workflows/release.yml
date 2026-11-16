@@ -71,7 +71,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: make release-artifacts CONFIGURATION=release VERSION="$VERSION" \
-          BUILD_NUMBER="$BUILD_NUMBER" CREATE_DMG_FINALIZE_FLAGS=''
+          BUILD_NUMBER="$BUILD_NUMBER" CREATE_DMG_FINALIZE_FLAGS='--skip-finalize --skip-jenkins'
 
       - name: Verify the built bundle
         env:
