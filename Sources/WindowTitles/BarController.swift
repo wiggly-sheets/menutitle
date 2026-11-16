@@ -26,6 +26,8 @@ final class BarController: NSObject {
     private var lastRenderKey: String?
     private var busy = false
     private var pending = false
+    private var lastFrontPid: pid_t?
+    private var settleDeadline = Date.distantPast
 
     override init() {
         panel = BarPanel(
@@ -87,11 +89,11 @@ final class BarController: NSObject {
         self.menuTimer = menuTimer
     }
 
-    private func scheduleRefresh() {
+    private func scheduleRefresh(after delay: TimeInterval = 0.05) {
         refreshWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.refresh() }
         refreshWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: work)
     }
 
     private func updateMenuState() {
@@ -109,6 +111,7 @@ final class BarController: NSObject {
 
     @objc func refresh() {
         guard AXIsProcessTrusted() else {
+            lastFrontPid = nil
             hide()
             statusItem.update(nil)
             return
@@ -117,8 +120,22 @@ final class BarController: NSObject {
         let frontmost = NSWorkspace.shared.frontmostApplication
         guard let frontPid = frontmost?.processIdentifier,
               frontPid != ProcessInfo.processInfo.processIdentifier else {
+            lastFrontPid = nil
             hide()
             statusItem.update(nil)
+            return
+        }
+
+        if frontPid != lastFrontPid {
+            lastFrontPid = frontPid
+            // The menu bar still shows the previous app's menus for a moment.
+            settleDeadline = Date().addingTimeInterval(0.18)
+            hide()
+        }
+
+        let remaining = settleDeadline.timeIntervalSinceNow
+        if remaining > 0 {
+            scheduleRefresh(after: remaining)
             return
         }
 
@@ -135,7 +152,9 @@ final class BarController: NSObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.busy = false
-                self.apply(info: info, menuBar: menuBar)
+                if NSWorkspace.shared.frontmostApplication?.processIdentifier == frontPid {
+                    self.apply(info: info, menuBar: menuBar)
+                }
                 if self.pending {
                     self.pending = false
                     self.refresh()
@@ -394,8 +413,15 @@ final class BarController: NSObject {
         )
         view.needsDisplay = true
         if !panel.isVisible {
+            panel.alphaValue = 0
             panel.orderFrontRegardless()
             view.resumeScrolling()
+        }
+        if panel.alphaValue < 1 {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.12
+                panel.animator().alphaValue = 1
+            }
         }
     }
 
@@ -461,6 +487,7 @@ final class BarController: NSObject {
 
     private func hide() {
         lastRenderKey = nil
+        panel.alphaValue = 0
         if panel.isVisible {
             panel.orderOut(nil)
         }
