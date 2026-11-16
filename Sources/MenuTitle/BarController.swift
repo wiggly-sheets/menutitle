@@ -73,6 +73,12 @@ final class BarController: NSObject {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appFontChanged),
+            name: AppIconFont.didChangeNotification,
+            object: nil
+        )
 
         observer.start { [weak self] in self?.scheduleRefresh() }
 
@@ -88,6 +94,11 @@ final class BarController: NSObject {
         }
         RunLoop.main.add(menuTimer, forMode: .common)
         self.menuTimer = menuTimer
+    }
+
+    @objc private func appFontChanged() {
+        lastRenderKey = nil
+        refresh()
     }
 
     private func scheduleRefresh(after delay: TimeInterval = 0.05) {
@@ -324,7 +335,7 @@ final class BarController: NSObject {
                 break
             case .appFont:
                 if let character = AppIconFont.shared.glyph(for: info.app) {
-                    let iconFont = NSFont(name: AppIconFont.fontName, size: size + 3) ?? font
+                    let iconFont = AppIconFont.shared.font(size: size + 3) ?? font
                     glyph = NSAttributedString(
                         string: character,
                         attributes: [.font: iconFont, .foregroundColor: textColor]

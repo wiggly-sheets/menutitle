@@ -16,6 +16,9 @@ enum Pref {
     static let leftInset = "leftInset"
     static let maxWidth = "maxWidth"
     static let iconStyle = "iconStyle"
+    static let fontUpdateMode = "fontUpdateMode"
+    static let fontInstalledVersion = "fontInstalledVersion"
+    static let fontLastCheck = "fontLastCheck"
     static let truncationStyle = "truncationStyle"
     static let maxLength = "maxLength"
     static let scrollTitles = "scrollTitles"
@@ -70,6 +73,9 @@ enum Pref {
         leftInset: 0.0,
         maxWidth: 360.0,
         iconStyle: IconStyle.appFont.rawValue,
+        fontUpdateMode: FontUpdateMode.automatic.rawValue,
+        fontInstalledVersion: "",
+        fontLastCheck: 0.0,
         truncationStyle: TruncationStyle.end.rawValue,
         maxLength: 0,
         scrollTitles: false,
@@ -156,6 +162,20 @@ enum IconStyle: String, CaseIterable, Identifiable {
         case .none: return "None"
         case .appFont: return "Sketchybar app font"
         case .native: return "Native app icon"
+        }
+    }
+}
+
+enum FontUpdateMode: String, CaseIterable, Identifiable {
+    case automatic
+    case manual
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: return "Automatic, daily"
+        case .manual: return "Manual"
         }
     }
 }

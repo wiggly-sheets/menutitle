@@ -55,6 +55,7 @@ struct SettingsView: View {
     @AppStorage(Pref.leftInset) private var leftInset = 0.0
     @AppStorage(Pref.maxWidth) private var maxWidth = 360.0
     @AppStorage(Pref.iconStyle) private var iconStyle = IconStyle.appFont.rawValue
+    @AppStorage(Pref.fontUpdateMode) private var fontUpdateMode = FontUpdateMode.automatic.rawValue
     @AppStorage(Pref.backgroundStyle) private var backgroundStyle = BarBackgroundStyle.liquidGlass.rawValue
     @AppStorage(Pref.useCustomTextColor) private var useCustomTextColor = false
     @AppStorage(Pref.textColorHex) private var textColorHex = "#FFFFFF"
@@ -93,6 +94,10 @@ struct SettingsView: View {
     @State private var loginError: String?
     @State private var loginNeedsApproval = LaunchAtLogin.needsApproval
     @State private var accessibilityTrusted = AXIsProcessTrusted()
+    @State private var fontLoaded = AppIconFont.shared.loaded
+    @State private var fontRelease = AppIconFont.shared.release
+    @State private var fontStatus: String?
+    @State private var fontChecking = false
 
     private var previewFont: Font {
         Font(FontResolver.font(family: fontFamily, size: fontSize, traits: fontTraits))
@@ -171,6 +176,10 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             accessibilityTrusted = AXIsProcessTrusted()
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppIconFont.didChangeNotification)) { _ in
+            fontLoaded = AppIconFont.shared.loaded
+            fontRelease = AppIconFont.shared.release
+        }
     }
 
     @ViewBuilder
@@ -186,12 +195,70 @@ struct SettingsView: View {
         }
     }
 
+    private func checkAppFont() {
+        guard !fontChecking else { return }
+        fontChecking = true
+        fontStatus = "Checking GitHub…"
+        let installed = AppIconFont.shared.release
+        Task {
+            do {
+                let result = try await AppFontUpdater.runCheck(installedTag: installed)
+                switch result {
+                case .upToDate(let tag):
+                    AppFontUpdater.recordCheck(installedTag: tag)
+                    await MainActor.run {
+                        fontStatus = "Up to date"
+                        fontLoaded = AppIconFont.shared.loaded
+                        fontRelease = AppIconFont.shared.release
+                        fontChecking = false
+                    }
+                case .updated(let info):
+                    AppFontUpdater.recordCheck(installedTag: info.tag)
+                    await MainActor.run {
+                        fontStatus = "Updated to \(info.tag)"
+                        fontChecking = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    fontStatus = error.localizedDescription
+                    fontChecking = false
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private var appearance: some View {
         Section {
             Picker("Next to the title", selection: $iconStyle) {
                 ForEach(IconStyle.allCases) { style in
                     Text(style.title).tag(style.rawValue)
+                }
+            }
+
+            HStack {
+                Text("App font").frame(width: 120, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(fontLoaded
+                        ? (fontRelease.isEmpty ? "Installed" : "Installed \(fontRelease)")
+                        : "Not installed")
+                    if let fontStatus {
+                        Text(fontStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button(fontChecking ? "Checking…" : "Check Now") {
+                    checkAppFont()
+                }
+                .disabled(fontChecking)
+            }
+
+            Picker("Font updates", selection: $fontUpdateMode) {
+                ForEach(FontUpdateMode.allCases) { mode in
+                    Text(mode.title).tag(mode.rawValue)
                 }
             }
 
@@ -249,8 +316,8 @@ struct SettingsView: View {
         } header: {
             Text("Appearance")
         } footer: {
-            if iconStyle == IconStyle.appFont.rawValue && !AppIconFont.shared.loaded {
-                Text("sketchybar-app-font.ttf was not found in ~/Library/Fonts or /Library/Fonts. Choose another icon style or install the font.")
+            if iconStyle == IconStyle.appFont.rawValue && !fontLoaded {
+                Text("sketchybar-app-font.ttf is not installed. MenuTitle downloads it from GitHub in the background. You can also install it with SketchyBar.")
             } else {
                 Text("The font panel sets the family, style, and size. The size slider stays in sync. Linked padding applies one value to all four sides; unlinked, each side is independent. Extra vertical inset trims the top and bottom further.")
             }

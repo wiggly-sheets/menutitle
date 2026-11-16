@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The sketchybar app font is no longer assumed to be installed. MenuTitle downloads it on first launch, checks GitHub once a day when automatic updates are on, and has a manual **Check Now** button in Appearance.
+
 ## [1.1.0] - 2026-11-16
 
 ### Added

@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     return
                 }
                 Permissions.showMissingAlertIfNeeded()
+                AppFontUpdater.startBackground()
                 self.bar.start()
             }
         }

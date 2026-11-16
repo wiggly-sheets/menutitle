@@ -6,8 +6,20 @@ import CoreText
 final class AppIconFont {
     static let shared = AppIconFont()
     static let fontName = "sketchybar-app-font"
+    static let didChangeNotification = Notification.Name("AppIconFontDidChange")
+
+    static let installURL = URL(
+        fileURLWithPath: NSHomeDirectory() + "/Library/Fonts/sketchybar-app-font.ttf"
+    )
+
+    static var candidateURLs: [URL] {
+        [installURL, URL(fileURLWithPath: "/Library/Fonts/sketchybar-app-font.ttf")]
+    }
 
     private(set) var loaded = false
+    private(set) var release = ""
+    private(set) var sourceURL: URL?
+    private var faceCache: [CGFloat: NSFont] = [:]
     private var exact: [String: String] = [:]
     private var prefixes: [(String, String)] = []
     private var defaultGlyph: String?
@@ -22,27 +34,88 @@ final class AppIconFont {
         return defaultGlyph
     }
 
+    /// The face from the exact file that supplied the glyph table, so a font
+    /// update does not keep drawing cached glyphs from the previous release.
+    func font(size: CGFloat) -> NSFont? {
+        if let cached = faceCache[size] { return cached }
+        var resolved: NSFont?
+        if let sourceURL,
+           let descriptors = CTFontManagerCreateFontDescriptorsFromURL(sourceURL as CFURL)
+                as? [CTFontDescriptor],
+           let descriptor = descriptors.first {
+            resolved = CTFontCreateWithFontDescriptor(descriptor, size, nil) as NSFont
+        }
+        if resolved == nil {
+            resolved = NSFont(name: Self.fontName, size: size)
+        }
+        if let resolved { faceCache[size] = resolved }
+        return resolved
+    }
+
+    func reload() {
+        loaded = false
+        release = ""
+        sourceURL = nil
+        faceCache.removeAll()
+        exact.removeAll()
+        prefixes.removeAll()
+        defaultGlyph = nil
+        load()
+    }
+
     private func load() {
-        let paths = [
-            NSHomeDirectory() + "/Library/Fonts/sketchybar-app-font.ttf",
-            "/Library/Fonts/sketchybar-app-font.ttf",
-        ]
-        guard let path = paths.first(where: { FileManager.default.fileExists(atPath: $0) }),
-              let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return }
+        var best: (url: URL, mapping: Mapping)?
 
-        CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: path) as CFURL, .process, nil)
+        for url in Self.candidateURLs {
+            guard let data = try? Data(contentsOf: url),
+                  let mapping = Self.readMapping(data),
+                  !mapping.exact.isEmpty else { continue }
+            if let current = best {
+                if Self.isNewerRelease(mapping.release, than: current.mapping.release) {
+                    best = (url, mapping)
+                }
+            } else {
+                best = (url, mapping)
+            }
+        }
 
-        guard let mapping = Self.readMapping(data), !mapping.exact.isEmpty else { return }
-        exact = mapping.exact
-        prefixes = mapping.prefixes
-        defaultGlyph = mapping.defaultGlyph
+        guard let best else { return }
+        CTFontManagerRegisterFontsForURL(best.url as CFURL, .process, nil)
+        exact = best.mapping.exact
+        prefixes = best.mapping.prefixes
+        defaultGlyph = best.mapping.defaultGlyph
+        release = best.mapping.release
+        sourceURL = best.url
         loaded = true
     }
 
     private struct Mapping {
+        var release: String
         var exact: [String: String]
         var prefixes: [(String, String)]
         var defaultGlyph: String?
+    }
+
+    /// True only for data with a readable APPM table and at least one app name.
+    static func isValidInstallable(_ data: Data) -> Bool {
+        guard let mapping = readMapping(data) else { return false }
+        return !mapping.exact.isEmpty
+    }
+
+    private static func isNewerRelease(_ candidate: String, than current: String) -> Bool {
+        let candidateParts = candidate.trimmingCharacters(in: .letters).split(separator: ".")
+        let currentParts = current.trimmingCharacters(in: .letters).split(separator: ".")
+        for (left, right) in zip(candidateParts, currentParts) {
+            if let leftNumber = Int(left), let rightNumber = Int(right) {
+                if leftNumber != rightNumber { return leftNumber > rightNumber }
+            } else if left != right {
+                return left.lexicographicallyPrecedes(right) == false
+            }
+        }
+        if candidateParts.count != currentParts.count {
+            return candidateParts.count > currentParts.count
+        }
+        return candidate > current
     }
 
     private static func readMapping(_ data: Data) -> Mapping? {
@@ -120,6 +193,11 @@ final class AppIconFont {
         }
 
         prefixes.sort { $0.0.count > $1.0.count }
-        return Mapping(exact: exact, prefixes: prefixes, defaultGlyph: byLigature[":default:"])
+        return Mapping(
+            release: object["release"] as? String ?? "",
+            exact: exact,
+            prefixes: prefixes,
+            defaultGlyph: byLigature[":default:"]
+        )
     }
 }

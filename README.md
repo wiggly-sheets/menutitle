@@ -71,6 +71,7 @@ The title moves as menus change width and stops before the notch or the next men
 ### Appearance
 
 - Icon styles: sketchybar app font glyph, native app icon, or no icon.
+- The app font is not bundled. MenuTitle downloads it when missing and can check GitHub daily or on demand.
 - Background styles: liquid glass, solid, transparent, or outline.
 - Custom text and background colors.
 - Background opacity, corner radius, and extra vertical inset.
