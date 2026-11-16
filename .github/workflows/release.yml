@@ -33,10 +33,10 @@ jobs:
           xcodebuild -version
           sdk="$(xcrun --sdk macosx --show-sdk-version)"
           echo "macOS SDK: $sdk"
-          case "$sdk" in
-            27.2) ;;
-            *) echo "::error::Package.swift stamps the macOS 27.2 SDK, but this runner has $sdk"; exit 1 ;;
-          esac
+          awk -v sdk="$sdk" 'BEGIN { exit !(sdk + 0 >= 26.0) }' || {
+            echo "::error::Liquid Glass needs the macOS 26.0 SDK or newer, but this runner has $sdk"
+            exit 1
+          }
 
       - name: Resolve the version
         id: version
