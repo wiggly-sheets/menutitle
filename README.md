@@ -13,6 +13,7 @@
 
   <p>
     <a href="https://github.com/wiggly-sheets/menutitle/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/wiggly-sheets/menutitle/ci.yml?branch=main&label=build" alt="Build status" /></a>
+    <a href="https://github.com/wiggly-sheets/menutitle/blob/main/LICENSE"><img src="https://img.shields.io/github/license/wiggly-sheets/menutitle?color=blue" alt="License: MIT" /></a>
     <a href="https://github.com/wiggly-sheets/menutitle/releases/latest"><img src="https://img.shields.io/github/v/release/wiggly-sheets/menutitle?label=latest&color=red" alt="Latest release" /></a>
     <a href="https://github.com/wiggly-sheets/menutitle/releases"><img src="https://img.shields.io/github/downloads/wiggly-sheets/menutitle/total?label=downloads&color=orange" alt="Total downloads" /></a>
     <a href="https://github.com/wiggly-sheets/menutitle/stargazers"><img src="https://img.shields.io/github/stars/wiggly-sheets/menutitle?color=yellow" alt="GitHub stars" /></a>
@@ -268,6 +269,12 @@ Found a security issue? Open an issue or contact the maintainer privately.
 - The menu bar item hides when the front app is MenuTitle itself or when Accessibility access is missing.
 - MenuTitle is an accessory app: no Dock icon and no app menu of its own.
 - If sketchybar still shows its `window_title` item in the same area, the two overlap. Remove that item or use the **Left inset** setting.
+
+---
+
+## License
+
+MenuTitle is released under the [MIT License](LICENSE). You are free to use, read, modify, and distribute it.
 
 ---
 
