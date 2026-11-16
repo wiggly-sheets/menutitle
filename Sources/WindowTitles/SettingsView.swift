@@ -201,7 +201,7 @@ struct SettingsView: View {
                 }
                 sliderRow("Opacity", value: $backgroundOpacity, range: 0...1, step: 0.05, unit: "")
                 sliderRow("Corner radius", value: $backgroundCornerRadius, range: 0...24, unit: "pt")
-                sliderRow("Shape height inset", value: $backgroundInsetY, range: 0...14, unit: "pt")
+                sliderRow("Extra vertical inset", value: $backgroundInsetY, range: 0...14, unit: "pt")
             }
 
             Toggle("Custom text color", isOn: $useCustomTextColor)
@@ -222,7 +222,7 @@ struct SettingsView: View {
             if iconStyle == IconStyle.appFont.rawValue && !AppIconFont.shared.loaded {
                 Text("sketchybar-app-font.ttf was not found in ~/Library/Fonts or /Library/Fonts. Choose another icon style or install the font.")
             } else {
-                Text("The font panel sets the family, style, and size. The size slider stays in sync. Shape height inset makes the background shorter than the menu bar.")
+                Text("The font panel sets the family, style, and size. The size slider stays in sync. Padding controls the space on all four sides of the background. Extra vertical inset trims the top and bottom further.")
             }
         }
     }

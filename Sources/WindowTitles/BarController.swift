@@ -377,7 +377,7 @@ final class BarController: NSObject {
             background == .liquidGlass,
             tint: backgroundColor,
             cornerRadius: cornerRadius,
-            insetY: backgroundInsetY
+            insetY: view.backgroundInsetY(for: content, height: barHeight)
         )
         view.needsDisplay = true
         if !panel.isVisible {

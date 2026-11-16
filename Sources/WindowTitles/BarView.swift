@@ -160,9 +160,21 @@ final class BarView: NSView {
         return attributed
     }
 
+    func backgroundInsetY(for content: BarContent, height: CGFloat) -> CGFloat {
+        let titleHeight = content.font.ascender - content.font.descender + content.font.leading
+        var contentHeight = titleHeight
+        if content.icon != nil || content.glyph != nil {
+            contentHeight = max(contentHeight, iconHeight(forHeight: height))
+        }
+        let padding = max(0, content.padding - content.backgroundInsetY)
+        let backgroundHeight = min(height - 1, contentHeight + padding * 2)
+        return max(0, (height - backgroundHeight) / 2)
+    }
+
     private func drawBackground(_ content: BarContent) {
         guard content.background == .solid || content.background == .outline else { return }
-        let rect = bounds.insetBy(dx: 0.5, dy: content.backgroundInsetY + 0.5)
+        let insetY = backgroundInsetY(for: content, height: bounds.height)
+        let rect = bounds.insetBy(dx: 0.5, dy: insetY + 0.5)
         guard rect.width > 0, rect.height > 0 else { return }
         let radius = min(content.cornerRadius, rect.height / 2)
         let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)

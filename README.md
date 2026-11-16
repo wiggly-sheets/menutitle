@@ -17,7 +17,7 @@ part of the menu bar, after the front app's menus.
 - Can remove browser and profile names that browsers append to window titles.
 - Optional app icon: sketchybar app font glyph, native app icon, or none.
 - Background styles: liquid glass, solid, transparent, outline, with custom
-  colors, opacity, corner radius, and shape height.
+  colors, opacity, corner radius, shape height, and padding on all four sides.
 - Configurable left, middle, and right click actions: open settings, show the
   app menu, focus, hide, minimize, or quit the shown app.
 - Optional custom position: drag the title anywhere on screen and lock it. The
@@ -107,7 +107,9 @@ falls back to a standard `NSVisualEffectView` blur.
 `Solid` fills the title area, `Outline` draws a border, and `Transparent`
 draws no background. `Appearance` adds an optional custom text color and
 background color, a background opacity slider, a corner radius slider, and a
-shape height inset that makes the background shorter than the menu bar.
+shape height inset. The `Padding` slider sets the space on all four sides of
+the background, so the background moves closer to the text vertically as well
+as horizontally. The shape height inset trims that vertical padding further.
 Background colors also tint liquid glass.
 
 ## Title shortening

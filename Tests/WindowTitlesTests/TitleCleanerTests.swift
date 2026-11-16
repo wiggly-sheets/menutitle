@@ -9,6 +9,8 @@ final class TitleCleanerTests: XCTestCase {
             "Page"
         )
         XCTAssertEqual(TitleCleaner.clean("Page — Mozilla Firefox", stripBrowserNames: true), "Page")
+        XCTAssertEqual(TitleCleaner.clean("Page – Mozilla Firefox", stripBrowserNames: true), "Page")
+        XCTAssertEqual(TitleCleaner.clean("Page - GOOGLE CHROME", stripBrowserNames: true), "Page")
     }
 
     func testKeepsNamesWhenStrippingIsOff() {
@@ -17,6 +19,9 @@ final class TitleCleanerTests: XCTestCase {
 
     func testKeepsOrdinarySuffixes() {
         XCTAssertEqual(TitleCleaner.clean("Notes – 64 notes", stripBrowserNames: true), "Notes – 64 notes")
+    }
+
+    func testDoesNotTreatProfileLikeSuffixAsProfileName() {
         XCTAssertEqual(
             TitleCleaner.clean("Page - Profile Settings", stripBrowserNames: true),
             "Page - Profile Settings"
@@ -33,6 +38,13 @@ final class TitleCleanerTests: XCTestCase {
     func testTruncateDoesNothingWhenOffOrShortEnough() {
         XCTAssertEqual(TitleCleaner.truncate("Short", maxLength: 0, style: .end), "Short")
         XCTAssertEqual(TitleCleaner.truncate("Short", maxLength: 10, style: .end), "Short")
+    }
+
+    func testTruncateKeepsTextAtExactMaxLength() {
         XCTAssertEqual(TitleCleaner.truncate("abcdefghij", maxLength: 10, style: .end), "abcdefghij")
+    }
+
+    func testTruncateToOneCharacterIsEllipsis() {
+        XCTAssertEqual(TitleCleaner.truncate("abc", maxLength: 1, style: .end), "…")
     }
 }
