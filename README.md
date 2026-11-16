@@ -21,8 +21,9 @@ part of the menu bar, after the front app's menus.
   app menu, focus, hide, minimize, or quit the shown app.
 - Optional custom position: drag the title anywhere on screen and lock it. The
   position is remembered.
-- Optional menu bar item on the right side that shows the same title, icon, and
-  click actions.
+- Optional menu bar item on the right side that shows the same title. It can
+  mirror the title's appearance and click actions, or use its own. Both can be
+  shown at once.
 - Settings for font, font size, padding, letter spacing, word spacing, gap,
   left inset, and maximum width.
 - Launch at login.
@@ -42,17 +43,34 @@ the title stays hidden rather than guessing a position.
 ## Build and run
 
 ```sh
-./build.sh
-open build/MenuTitle.app
+make run
 ```
+
+`make` prints every target. `make test` runs the changelog check and the test
+suite. `make app` builds `dist/MenuTitle.app`, and `make verify` checks its
+architecture, SDK, version, and signature.
 
 For launch at login, move `MenuTitle.app` to `/Applications` first. The login
 item points at the app's current location.
 
-The build script uses an ad-hoc signature, which changes on every rebuild.
-macOS may therefore ask for Accessibility access again after rebuilding, and
-the login item may need re-approval. For a permanent grant, sign the app with a
-stable identity.
+The build uses an ad-hoc signature, which changes on every rebuild. macOS may
+therefore ask for Accessibility access again after rebuilding, and the login
+item may need re-approval. For a permanent grant, sign the app with a stable
+identity.
+
+## Release
+
+```sh
+make release VERSION=1.0.0
+git push origin main
+git push origin v1.0.0
+```
+
+`make release` moves `[Unreleased]` in `CHANGELOG.md` to the version, runs the
+tests, builds the DMG and its checksum, verifies the bundle, commits the bump,
+and creates the tag. It never pushes. Pushing the tag starts the release
+workflow, which publishes `MenuTitle-<version>.dmg` and its `.sha256` file.
+The Homebrew tap picks up that release.
 
 ## Using it
 
@@ -60,9 +78,9 @@ stable identity.
   to different actions in the `Clicking` settings section.
 - Enable `Use custom position` to drag the title anywhere on screen. Turn on
   `Lock position` to keep clicks from moving it.
-- Enable `Show menu bar item` for a right-side menu bar item with the same
-  title and actions. `Show title bar` can be turned off if only the item is
-  wanted.
+- In `Placement`, choose `Title bar`, `Menu bar item`, or `Both`.
+- The menu bar item can mirror the title's appearance and click actions, or use
+  its own icon, font, size, and actions.
 - Settings changes apply within a second.
 
 ## Icons

@@ -24,6 +24,14 @@ struct SettingsView: View {
     @AppStorage(Pref.rightClickAction) private var rightClickAction = ClickAction.showMenu.rawValue
     @AppStorage(Pref.showPanel) private var showPanel = true
     @AppStorage(Pref.showStatusItem) private var showStatusItem = false
+    @AppStorage(Pref.statusItemMirrorsTitle) private var statusItemMirrorsTitle = true
+    @AppStorage(Pref.statusItemIconStyle) private var statusItemIconStyle = IconStyle.appFont.rawValue
+    @AppStorage(Pref.statusItemFontFamily) private var statusItemFontFamily = "Liga SFMono Nerd Font"
+    @AppStorage(Pref.statusItemFontSize) private var statusItemFontSize = 11.0
+    @AppStorage(Pref.statusItemMirrorsClicks) private var statusItemMirrorsClicks = true
+    @AppStorage(Pref.statusItemLeftClickAction) private var statusItemLeftClickAction = ClickAction.openSettings.rawValue
+    @AppStorage(Pref.statusItemMiddleClickAction) private var statusItemMiddleClickAction = ClickAction.none.rawValue
+    @AppStorage(Pref.statusItemRightClickAction) private var statusItemRightClickAction = ClickAction.showMenu.rawValue
     @AppStorage(Pref.customPosition) private var customPosition = false
     @AppStorage(Pref.lockPosition) private var lockPosition = false
 
@@ -38,6 +46,20 @@ struct SettingsView: View {
 
     private var previewFont: Font {
         fontFamily.isEmpty ? .system(size: fontSize) : .custom(fontFamily, size: fontSize)
+    }
+
+    private var placementMode: Binding<PlacementMode> {
+        Binding(
+            get: {
+                if showPanel && showStatusItem { return .both }
+                if showStatusItem { return .menuBarItem }
+                return .titleBar
+            },
+            set: { mode in
+                showPanel = mode != .menuBarItem
+                showStatusItem = mode != .titleBar
+            }
+        )
     }
 
     var body: some View {
@@ -81,19 +103,44 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle("Show title bar", isOn: $showPanel)
-                Toggle("Show menu bar item", isOn: $showStatusItem)
-                Toggle("Use custom position", isOn: $customPosition)
-                if customPosition {
-                    Toggle("Lock position", isOn: $lockPosition)
-                    Text("Drag the title to move it. The position is remembered.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Picker("Show", selection: placementMode) {
+                    ForEach(PlacementMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if showPanel {
+                    Toggle("Use custom position", isOn: $customPosition)
+                    if customPosition {
+                        Toggle("Lock position", isOn: $lockPosition)
+                        Text("Drag the title to move it. The position is remembered.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if showStatusItem {
+                    Toggle("Use title appearance", isOn: $statusItemMirrorsTitle)
+                    if !statusItemMirrorsTitle {
+                        Picker("Item icon", selection: $statusItemIconStyle) {
+                            ForEach(IconStyle.allCases) { style in
+                                Text(style.title).tag(style.rawValue)
+                            }
+                        }
+                        Picker("Item font", selection: $statusItemFontFamily) {
+                            Text("System").tag("")
+                            ForEach(fontFamilies, id: \.self) { family in
+                                Text(family).tag(family)
+                            }
+                        }
+                        sliderRow("Item size", value: $statusItemFontSize, range: 8...18, unit: "pt")
+                    }
                 }
             } header: {
                 Text("Placement")
             } footer: {
-                Text("The menu bar item uses the same title, icon, and click settings.")
+                Text("Both can be shown at once. The menu bar item always uses the same title text.")
             }
 
             Section {
@@ -110,6 +157,27 @@ struct SettingsView: View {
                 Picker("Right click", selection: $rightClickAction) {
                     ForEach(ClickAction.allCases) { action in
                         Text(action.title).tag(action.rawValue)
+                    }
+                }
+
+                if showStatusItem {
+                    Toggle("Menu bar item uses these actions", isOn: $statusItemMirrorsClicks)
+                    if !statusItemMirrorsClicks {
+                        Picker("Item left click", selection: $statusItemLeftClickAction) {
+                            ForEach(ClickAction.allCases) { action in
+                                Text(action.title).tag(action.rawValue)
+                            }
+                        }
+                        Picker("Item middle click", selection: $statusItemMiddleClickAction) {
+                            ForEach(ClickAction.allCases) { action in
+                                Text(action.title).tag(action.rawValue)
+                            }
+                        }
+                        Picker("Item right click", selection: $statusItemRightClickAction) {
+                            ForEach(ClickAction.allCases) { action in
+                                Text(action.title).tag(action.rawValue)
+                            }
+                        }
                     }
                 }
             } header: {

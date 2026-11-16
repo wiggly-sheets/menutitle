@@ -193,25 +193,29 @@ final class BarController: NSObject {
             return
         }
 
-        let nativeIcon = iconStyle == .native
-            ? NSRunningApplication(processIdentifier: info.pid)?.icon
-            : nil
-
-        func makeContent(_ size: CGFloat) -> BarContent {
-            let font = FontResolver.font(family: fontFamily, size: size)
+        func makeContent(_ size: CGFloat, _ family: String, _ style: IconStyle) -> BarContent {
+            let font = FontResolver.font(family: family, size: size)
             var glyph: NSAttributedString?
-            if iconStyle == .appFont, let character = AppIconFont.shared.glyph(for: info.app) {
-                let iconFont = NSFont(name: AppIconFont.fontName, size: size + 3) ?? font
-                glyph = NSAttributedString(
-                    string: character,
-                    attributes: [.font: iconFont, .foregroundColor: NSColor.labelColor]
-                )
+            var icon: NSImage?
+            switch style {
+            case .none:
+                break
+            case .appFont:
+                if let character = AppIconFont.shared.glyph(for: info.app) {
+                    let iconFont = NSFont(name: AppIconFont.fontName, size: size + 3) ?? font
+                    glyph = NSAttributedString(
+                        string: character,
+                        attributes: [.font: iconFont, .foregroundColor: NSColor.labelColor]
+                    )
+                }
+            case .native:
+                icon = NSRunningApplication(processIdentifier: info.pid)?.icon
             }
             return BarContent(
                 title: title,
                 font: font,
                 color: .labelColor,
-                icon: nativeIcon,
+                icon: icon,
                 glyph: glyph,
                 padding: padding,
                 spacing: 5,
@@ -223,8 +227,9 @@ final class BarController: NSObject {
             )
         }
 
+        let titleContent = makeContent(fontSize, fontFamily, iconStyle)
         var size = fontSize
-        var content = makeContent(size)
+        var content = titleContent
         view.content = content
         var natural = view.naturalWidth(forHeight: barHeight)
 
@@ -232,13 +237,28 @@ final class BarController: NSObject {
             let minimum = max(8, fontSize * 0.6)
             while natural > cap && size > minimum + 0.001 {
                 size = max(minimum, size - 0.5)
-                content = makeContent(size)
+                content = makeContent(size, fontFamily, iconStyle)
                 view.content = content
                 natural = view.naturalWidth(forHeight: barHeight)
             }
         }
 
-        statusItem.update(showStatusItem ? content : nil)
+        var statusContent: BarContent?
+        if showStatusItem {
+            if defaults.bool(forKey: Pref.statusItemMirrorsTitle) {
+                statusContent = titleContent
+            } else {
+                let statusStyle = IconStyle(
+                    rawValue: defaults.string(forKey: Pref.statusItemIconStyle) ?? ""
+                ) ?? .appFont
+                statusContent = makeContent(
+                    CGFloat(defaults.double(forKey: Pref.statusItemFontSize)),
+                    defaults.string(forKey: Pref.statusItemFontFamily) ?? "",
+                    statusStyle
+                )
+            }
+        }
+        statusItem.update(statusContent)
         guard showPanel, !menuOpen else {
             hide()
             return
@@ -353,7 +373,21 @@ final class BarController: NSObject {
     }
 
     private func performStatusClick(button: Int) {
-        perform(clickAction(button: button), point: statusItem.menuPoint, target: statusItem.anchorView)
+        let defaults = UserDefaults.standard
+        let action: ClickAction
+        if defaults.bool(forKey: Pref.statusItemMirrorsClicks) {
+            action = clickAction(button: button)
+        } else {
+            let key: String
+            switch button {
+            case 0: key = Pref.statusItemLeftClickAction
+            case 1: key = Pref.statusItemRightClickAction
+            case 2: key = Pref.statusItemMiddleClickAction
+            default: return
+            }
+            action = ClickAction(rawValue: defaults.string(forKey: key) ?? "") ?? .none
+        }
+        perform(action, point: statusItem.menuPoint, target: statusItem.anchorView)
     }
 
     private func perform(_ action: ClickAction, point: NSPoint, target: NSView?) {

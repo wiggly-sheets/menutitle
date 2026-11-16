@@ -27,6 +27,14 @@ enum Pref {
     static let positionSet = "positionSet"
     static let positionX = "positionX"
     static let positionY = "positionY"
+    static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
+    static let statusItemIconStyle = "statusItemIconStyle"
+    static let statusItemFontFamily = "statusItemFontFamily"
+    static let statusItemFontSize = "statusItemFontSize"
+    static let statusItemMirrorsClicks = "statusItemMirrorsClicks"
+    static let statusItemLeftClickAction = "statusItemLeftClickAction"
+    static let statusItemMiddleClickAction = "statusItemMiddleClickAction"
+    static let statusItemRightClickAction = "statusItemRightClickAction"
 
     static let defaults: [String: Any] = [
         fontFamily: "Liga SFMono Nerd Font",
@@ -55,6 +63,14 @@ enum Pref {
         positionSet: false,
         positionX: 0.0,
         positionY: 0.0,
+        statusItemMirrorsTitle: true,
+        statusItemIconStyle: IconStyle.appFont.rawValue,
+        statusItemFontFamily: "Liga SFMono Nerd Font",
+        statusItemFontSize: 11.0,
+        statusItemMirrorsClicks: true,
+        statusItemLeftClickAction: ClickAction.openSettings.rawValue,
+        statusItemMiddleClickAction: ClickAction.none.rawValue,
+        statusItemRightClickAction: ClickAction.showMenu.rawValue,
     ]
 }
 
@@ -128,6 +144,22 @@ enum ClickAction: String, CaseIterable, Identifiable {
         case .hideApp: return "Hide app"
         case .minimizeApp: return "Minimize app"
         case .quitApp: return "Quit app"
+        }
+    }
+}
+
+enum PlacementMode: String, CaseIterable, Identifiable {
+    case titleBar
+    case menuBarItem
+    case both
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .titleBar: return "Title bar"
+        case .menuBarItem: return "Menu bar item"
+        case .both: return "Both"
         }
     }
 }

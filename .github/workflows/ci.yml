@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Test and package
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          xcode="$(find /Applications -maxdepth 1 -name 'Xcode_27*.app' -print 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$xcode" ]; then
+            echo "::error::no Xcode 27 installation on this runner"
+            ls /Applications
+            exit 1
+          fi
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+          sdk="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $sdk"
+          case "$sdk" in
+            27.2) ;;
+            *) echo "::error::Package.swift stamps the macOS 27.2 SDK, but this runner has $sdk"; exit 1 ;;
+          esac
+
+      - name: Test
+        run: make test
+
+      - name: Build the app bundle
+        env:
+          VERSION: 0.0.0-ci
+          BUILD_NUMBER: 0
+        run: make app CONFIGURATION=release VERSION="$VERSION" BUILD_NUMBER="$BUILD_NUMBER"
+
+      # macOS gives an app the current appearance only when its executable
+      # records an SDK of 26.0 or newer. `make verify` checks that, the
+      # architecture, the bundle version and the signature.
+      - name: Verify the app bundle
+        env:
+          VERSION: 0.0.0-ci
+        run: make verify VERSION="$VERSION"
+
+      # The DMG and the checksum are only built on a release tag, so a broken
+      # create-dmg flag, a broken hdiutil convert or a wrong checksum name
+      # would only be found at release time. This step runs the same recipe
+      # on every push.
+      # The step is NOT a gate: the release flags drive the Finder layout of
+      # the window through AppleScript, and that needs a usable GUI session.
+      - name: Build release artifacts
+        continue-on-error: true
+        env:
+          VERSION: 0.0.0-ci
+          BUILD_NUMBER: 0
+        run: |
+          brew install create-dmg
+          make release-artifacts CONFIGURATION=release VERSION="$VERSION" \
+            BUILD_NUMBER="$BUILD_NUMBER" CREATE_DMG_FINALIZE_FLAGS=''
+
+      # The `hdiutil convert` branch of the DMG recipe only runs when
+      # CREATE_DMG_FINALIZE_FLAGS is not empty. This step runs the recipe with
+      # the flags that skip the Finder layout, so the branch runs without a GUI.
+      - name: Build release artifacts with the default finalize flags
+        env:
+          VERSION: 0.0.0-ci-convert
+          BUILD_NUMBER: 1
+        run: |
+          brew install create-dmg
+          make release-artifacts CONFIGURATION=release VERSION="$VERSION" \
+            BUILD_NUMBER="$BUILD_NUMBER" \
+            CREATE_DMG_FINALIZE_FLAGS='--skip-finalize --skip-jenkins'
