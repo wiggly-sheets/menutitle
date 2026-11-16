@@ -164,6 +164,11 @@ final class BarController: NSObject {
             String(defaults.integer(forKey: Pref.fontTraits)),
             String(defaults.double(forKey: Pref.fontSize)),
             String(defaults.double(forKey: Pref.padding)),
+            "\(defaults.bool(forKey: Pref.paddingLinked))",
+            String(defaults.double(forKey: Pref.paddingLeft)),
+            String(defaults.double(forKey: Pref.paddingRight)),
+            String(defaults.double(forKey: Pref.paddingTop)),
+            String(defaults.double(forKey: Pref.paddingBottom)),
             String(defaults.double(forKey: Pref.letterSpacing)),
             String(defaults.double(forKey: Pref.wordSpacing)),
             defaults.string(forKey: Pref.iconStyle) ?? "",
@@ -216,6 +221,11 @@ final class BarController: NSObject {
         let fontTraits = defaults.integer(forKey: Pref.fontTraits)
         let iconStyle = IconStyle(rawValue: defaults.string(forKey: Pref.iconStyle) ?? "") ?? .appFont
         let padding = CGFloat(defaults.double(forKey: Pref.padding))
+        let paddingLinked = defaults.bool(forKey: Pref.paddingLinked)
+        let paddingLeft = paddingLinked ? padding : CGFloat(defaults.double(forKey: Pref.paddingLeft))
+        let paddingRight = paddingLinked ? padding : CGFloat(defaults.double(forKey: Pref.paddingRight))
+        let paddingTop = paddingLinked ? padding : CGFloat(defaults.double(forKey: Pref.paddingTop))
+        let paddingBottom = paddingLinked ? padding : CGFloat(defaults.double(forKey: Pref.paddingBottom))
         let letterSpacing = CGFloat(defaults.double(forKey: Pref.letterSpacing))
         let wordSpacing = CGFloat(defaults.double(forKey: Pref.wordSpacing))
         let gap = CGFloat(defaults.double(forKey: Pref.gap))
@@ -287,7 +297,10 @@ final class BarController: NSObject {
                 color: textColor,
                 icon: icon,
                 glyph: glyph,
-                padding: padding,
+                paddingLeft: paddingLeft,
+                paddingRight: paddingRight,
+                paddingTop: paddingTop,
+                paddingBottom: paddingBottom,
                 spacing: 5,
                 letterSpacing: letterSpacing,
                 wordSpacing: wordSpacing,

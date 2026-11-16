@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Custom text and background colors, background opacity, corner radius, and shape height inset. Padding now sets the top, bottom, left, and right space inside the background.
+- Custom text and background colors, background opacity, corner radius, and shape height inset. Padding now sets the top, bottom, left, and right space inside the background; link the four sides or set each one separately.
 
 ## [1.0.0] - 2026-11-16
 

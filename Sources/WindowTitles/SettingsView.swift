@@ -44,6 +44,11 @@ struct SettingsView: View {
     @AppStorage(Pref.fontTraits) private var fontTraits = 0
     @AppStorage(Pref.fontSize) private var fontSize = 11.0
     @AppStorage(Pref.padding) private var padding = 8.0
+    @AppStorage(Pref.paddingLinked) private var paddingLinked = true
+    @AppStorage(Pref.paddingLeft) private var paddingLeft = 8.0
+    @AppStorage(Pref.paddingRight) private var paddingRight = 8.0
+    @AppStorage(Pref.paddingTop) private var paddingTop = 8.0
+    @AppStorage(Pref.paddingBottom) private var paddingBottom = 8.0
     @AppStorage(Pref.letterSpacing) private var letterSpacing = 0.0
     @AppStorage(Pref.wordSpacing) private var wordSpacing = 0.0
     @AppStorage(Pref.gap) private var gap = 6.0
@@ -89,6 +94,21 @@ struct SettingsView: View {
 
     private var previewFont: Font {
         Font(FontResolver.font(family: fontFamily, size: fontSize, traits: fontTraits))
+    }
+
+    private var paddingLinkBinding: Binding<Bool> {
+        Binding(
+            get: { paddingLinked },
+            set: { linked in
+                if !linked {
+                    paddingLeft = padding
+                    paddingRight = padding
+                    paddingTop = padding
+                    paddingBottom = padding
+                }
+                paddingLinked = linked
+            }
+        )
     }
 
     private var textColorBinding: Binding<Color> {
@@ -184,7 +204,15 @@ struct SettingsView: View {
             }
 
             sliderRow("Size", value: $fontSize, range: 8...18, unit: "pt")
-            sliderRow("Padding", value: $padding, range: 0...24, unit: "pt")
+            Toggle("Link padding", isOn: paddingLinkBinding)
+            if paddingLinked {
+                sliderRow("Padding", value: $padding, range: 0...24, unit: "pt")
+            } else {
+                sliderRow("Left", value: $paddingLeft, range: 0...24, unit: "pt")
+                sliderRow("Right", value: $paddingRight, range: 0...24, unit: "pt")
+                sliderRow("Top", value: $paddingTop, range: 0...24, unit: "pt")
+                sliderRow("Bottom", value: $paddingBottom, range: 0...24, unit: "pt")
+            }
             sliderRow("Letter spacing", value: $letterSpacing, range: -1...5, step: 0.5, unit: "pt")
             sliderRow("Word spacing", value: $wordSpacing, range: 0...12, unit: "pt")
 
@@ -222,7 +250,7 @@ struct SettingsView: View {
             if iconStyle == IconStyle.appFont.rawValue && !AppIconFont.shared.loaded {
                 Text("sketchybar-app-font.ttf was not found in ~/Library/Fonts or /Library/Fonts. Choose another icon style or install the font.")
             } else {
-                Text("The font panel sets the family, style, and size. The size slider stays in sync. Padding controls the space on all four sides of the background. Extra vertical inset trims the top and bottom further.")
+                Text("The font panel sets the family, style, and size. The size slider stays in sync. Linked padding applies one value to all four sides; unlinked, each side is independent. Extra vertical inset trims the top and bottom further.")
             }
         }
     }

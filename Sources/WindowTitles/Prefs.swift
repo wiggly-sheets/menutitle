@@ -5,6 +5,11 @@ enum Pref {
     static let fontTraits = "fontTraits"
     static let fontSize = "fontSize"
     static let padding = "padding"
+    static let paddingLinked = "paddingLinked"
+    static let paddingLeft = "paddingLeft"
+    static let paddingRight = "paddingRight"
+    static let paddingTop = "paddingTop"
+    static let paddingBottom = "paddingBottom"
     static let letterSpacing = "letterSpacing"
     static let wordSpacing = "wordSpacing"
     static let gap = "gap"
@@ -50,6 +55,11 @@ enum Pref {
         fontTraits: 0,
         fontSize: 11.0,
         padding: 8.0,
+        paddingLinked: true,
+        paddingLeft: 8.0,
+        paddingRight: 8.0,
+        paddingTop: 8.0,
+        paddingBottom: 8.0,
         letterSpacing: 0.0,
         wordSpacing: 0.0,
         gap: 6.0,

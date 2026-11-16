@@ -6,7 +6,10 @@ struct BarContent {
     var color: NSColor
     var icon: NSImage?
     var glyph: NSAttributedString?
-    var padding: CGFloat
+    var paddingLeft: CGFloat
+    var paddingRight: CGFloat
+    var paddingTop: CGFloat
+    var paddingBottom: CGFloat
     var spacing: CGFloat
     var letterSpacing: CGFloat
     var wordSpacing: CGFloat
@@ -52,7 +55,8 @@ final class BarView: NSView {
         guard let content else { return 0 }
         let titleWidth = styledTitle(content.title, content: content).size().width
         let iconWidth = self.iconWidth(forHeight: height)
-        return content.padding * 2 + iconWidth + (iconWidth > 0 ? content.spacing : 0) + titleWidth
+        return content.paddingLeft + content.paddingRight + iconWidth
+            + (iconWidth > 0 ? content.spacing : 0) + titleWidth
     }
 
     private func iconHeight(forHeight height: CGFloat) -> CGFloat {
@@ -110,27 +114,39 @@ final class BarView: NSView {
 
         drawBackground(content)
 
-        var x = content.padding
+        let offsetY = contentVerticalOffset(for: content)
+        var x = content.paddingLeft
         if let icon = content.icon {
             let side = iconHeight(forHeight: bounds.height)
-            icon.draw(in: NSRect(x: x, y: (bounds.height - side) / 2, width: side, height: side))
+            icon.draw(in: NSRect(
+                x: x,
+                y: (bounds.height - side) / 2 + offsetY,
+                width: side,
+                height: side
+            ))
             x += side + content.spacing
         } else if let glyph = content.glyph {
             let size = glyph.size()
-            glyph.draw(at: NSPoint(x: x, y: (bounds.height - size.height) / 2))
+            glyph.draw(at: NSPoint(
+                x: x,
+                y: (bounds.height - size.height) / 2 + offsetY
+            ))
             x += size.width + content.spacing
         }
 
-        let available = max(0, bounds.width - x - content.padding)
+        let available = max(0, bounds.width - x - content.paddingRight)
         let textRect = NSRect(x: x, y: 0, width: available, height: bounds.height)
 
         if content.scrolling {
-            drawScrolling(styledTitle(content.title, content: content), in: textRect)
+            drawScrolling(styledTitle(content.title, content: content), in: textRect, offsetY: offsetY)
         } else {
             let text = truncated(content.title, content: content, width: available)
             let styled = styledTitle(text, content: content)
             let size = styled.size()
-            styled.draw(at: NSPoint(x: x, y: (bounds.height - size.height) / 2))
+            styled.draw(at: NSPoint(
+                x: x,
+                y: (bounds.height - size.height) / 2 + offsetY
+            ))
         }
     }
 
@@ -160,15 +176,34 @@ final class BarView: NSView {
         return attributed
     }
 
-    func backgroundInsetY(for content: BarContent, height: CGFloat) -> CGFloat {
+    private func verticalPadding(_ content: BarContent) -> (top: CGFloat, bottom: CGFloat) {
+        (
+            top: max(0, content.paddingTop - content.backgroundInsetY),
+            bottom: max(0, content.paddingBottom - content.backgroundInsetY)
+        )
+    }
+
+    private func contentHeight(for content: BarContent, height: CGFloat) -> CGFloat {
         let titleHeight = content.font.ascender - content.font.descender + content.font.leading
-        var contentHeight = titleHeight
         if content.icon != nil || content.glyph != nil {
-            contentHeight = max(contentHeight, iconHeight(forHeight: height))
+            return max(titleHeight, iconHeight(forHeight: height))
         }
-        let padding = max(0, content.padding - content.backgroundInsetY)
-        let backgroundHeight = min(height - 1, contentHeight + padding * 2)
+        return titleHeight
+    }
+
+    func backgroundInsetY(for content: BarContent, height: CGFloat) -> CGFloat {
+        let padding = verticalPadding(content)
+        let backgroundHeight = min(
+            height - 1,
+            contentHeight(for: content, height: height) + padding.top + padding.bottom
+        )
         return max(0, (height - backgroundHeight) / 2)
+    }
+
+    private func contentVerticalOffset(for content: BarContent) -> CGFloat {
+        let padding = verticalPadding(content)
+        let limit = max(0, (bounds.height - contentHeight(for: content, height: bounds.height)) / 2)
+        return min(limit, max(-limit, (padding.bottom - padding.top) / 2))
     }
 
     private func drawBackground(_ content: BarContent) {
@@ -195,9 +230,9 @@ final class BarView: NSView {
         }
     }
 
-    private func drawScrolling(_ text: NSAttributedString, in rect: NSRect) {
+    private func drawScrolling(_ text: NSAttributedString, in rect: NSRect, offsetY: CGFloat) {
         let size = text.size()
-        let y = (rect.height - size.height) / 2
+        let y = (rect.height - size.height) / 2 + offsetY
 
         guard size.width > rect.width else {
             text.draw(at: NSPoint(x: rect.minX, y: y))

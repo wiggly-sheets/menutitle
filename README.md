@@ -73,7 +73,7 @@ The title moves as menus change width and stops before the notch or the next men
 - Background styles: liquid glass, solid, transparent, or outline.
 - Custom text and background colors.
 - Background opacity, corner radius, and extra vertical inset.
-- Padding on all four sides of the background.
+- Padding on all four sides of the background, linked or set per side.
 - Font family, style, and size through the native macOS font panel.
 - Letter spacing, word spacing, and max width.
 - Sidebar settings with a pane for each group.
