@@ -4,6 +4,7 @@
 
 APP_NAME := MenuTitle
 PRODUCT_NAME := WindowTitles
+export MENUTITLE_SDK_VERSION := $(shell xcrun --sdk macosx --show-sdk-version)
 CONFIGURATION ?= debug
 # The version of a release comes from the command line: `make release VERSION=1.2.3`.
 # A build without a version uses the placeholder below. The placeholder is not a

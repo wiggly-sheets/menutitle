@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Sidebar settings window with Appearance, Placement, Clicking, Title, Position, General, and Permissions panes.
+- Native font panel picker for family, style, and size, with the size slider kept in sync.
+- Instant title updates from Accessibility window notifications, with a slower background poll as fallback.
 - Menu bar title for the focused yabai window, placed after the front app's menus.
 - Notch and menu bar item clamping, with an optional custom draggable position.
 - Optional right-side menu bar item with its own appearance and click actions.

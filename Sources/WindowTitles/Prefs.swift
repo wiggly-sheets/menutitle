@@ -2,6 +2,7 @@ import AppKit
 
 enum Pref {
     static let fontFamily = "fontFamily"
+    static let fontTraits = "fontTraits"
     static let fontSize = "fontSize"
     static let padding = "padding"
     static let letterSpacing = "letterSpacing"
@@ -30,6 +31,7 @@ enum Pref {
     static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
     static let statusItemIconStyle = "statusItemIconStyle"
     static let statusItemFontFamily = "statusItemFontFamily"
+    static let statusItemFontTraits = "statusItemFontTraits"
     static let statusItemFontSize = "statusItemFontSize"
     static let statusItemMirrorsClicks = "statusItemMirrorsClicks"
     static let statusItemLeftClickAction = "statusItemLeftClickAction"
@@ -38,6 +40,7 @@ enum Pref {
 
     static let defaults: [String: Any] = [
         fontFamily: "Liga SFMono Nerd Font",
+        fontTraits: 0,
         fontSize: 11.0,
         padding: 8.0,
         letterSpacing: 0.0,
@@ -66,6 +69,7 @@ enum Pref {
         statusItemMirrorsTitle: true,
         statusItemIconStyle: IconStyle.appFont.rawValue,
         statusItemFontFamily: "Liga SFMono Nerd Font",
+        statusItemFontTraits: 0,
         statusItemFontSize: 11.0,
         statusItemMirrorsClicks: true,
         statusItemLeftClickAction: ClickAction.openSettings.rawValue,
@@ -165,9 +169,15 @@ enum PlacementMode: String, CaseIterable, Identifiable {
 }
 
 enum FontResolver {
-    static func font(family: String, size: CGFloat) -> NSFont {
+    static func font(family: String, size: CGFloat, traits: Int = 0) -> NSFont {
+        let mask = NSFontTraitMask(rawValue: UInt(traits))
         if !family.isEmpty,
-           let font = NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: size) {
+           let font = NSFontManager.shared.font(
+               withFamily: family,
+               traits: mask,
+               weight: mask.contains(.boldFontMask) ? 9 : 5,
+               size: size
+           ) {
             return font
         }
         return .systemFont(ofSize: size)

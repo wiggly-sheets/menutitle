@@ -26,6 +26,10 @@ part of the menu bar, after the front app's menus.
   shown at once.
 - Settings for font, font size, padding, letter spacing, word spacing, gap,
   left inset, and maximum width.
+- Native font panel picker for family, style, and size, plus sidebar settings
+  panes for each group.
+- Instant title updates from Accessibility window notifications, with low
+  background work while idle.
 - Launch at login.
 - Hides in native fullscreen spaces and when no titled window has focus.
 
@@ -81,7 +85,9 @@ The Homebrew tap picks up that release.
 - In `Placement`, choose `Title bar`, `Menu bar item`, or `Both`.
 - The menu bar item can mirror the title's appearance and click actions, or use
   its own icon, font, size, and actions.
-- Settings changes apply within a second.
+- Pick fonts with `Choose…` in `Appearance` to open the system font panel. It
+  sets family, style, and size; the size slider stays in sync.
+- Settings changes apply immediately.
 
 ## Icons
 

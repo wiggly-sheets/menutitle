@@ -21,6 +21,9 @@ final class BarController: NSObject {
     private var timer: Timer?
     private var menuTimer: Timer?
     private var menuOpen = false
+    private let observer = FrontWindowObserver()
+    private var refreshWork: DispatchWorkItem?
+    private var lastRenderKey: String?
     private var busy = false
     private var pending = false
 
@@ -68,18 +71,27 @@ final class BarController: NSObject {
             object: nil
         )
 
+        observer.start { [weak self] in self?.scheduleRefresh() }
+
         refresh()
-        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
             self?.refresh()
         }
         RunLoop.main.add(timer, forMode: .default)
         self.timer = timer
 
-        let menuTimer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+        let menuTimer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
             self?.updateMenuState()
         }
         RunLoop.main.add(menuTimer, forMode: .common)
         self.menuTimer = menuTimer
+    }
+
+    private func scheduleRefresh() {
+        refreshWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.refresh() }
+        refreshWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
     }
 
     private func updateMenuState() {
@@ -115,6 +127,7 @@ final class BarController: NSObject {
             return
         }
         busy = true
+        observer.observe(pid: frontPid)
 
         queue.async { [weak self] in
             let info = Yabai.queryFrontWindow()
@@ -142,6 +155,46 @@ final class BarController: NSObject {
             statusItem.update(nil)
             return
         }
+
+        var keyParts: [String] = [
+            info.app, info.title, String(info.pid), String(info.fullscreen),
+            "\(menuBar.endX)", String(describing: screen.frame),
+            String(menuOpen),
+            defaults.string(forKey: Pref.fontFamily) ?? "",
+            String(defaults.integer(forKey: Pref.fontTraits)),
+            String(defaults.double(forKey: Pref.fontSize)),
+            String(defaults.double(forKey: Pref.padding)),
+            String(defaults.double(forKey: Pref.letterSpacing)),
+            String(defaults.double(forKey: Pref.wordSpacing)),
+            defaults.string(forKey: Pref.iconStyle) ?? "",
+            defaults.string(forKey: Pref.backgroundStyle) ?? "",
+            defaults.string(forKey: Pref.truncationStyle) ?? "",
+            String(defaults.integer(forKey: Pref.maxLength)),
+            "\(defaults.bool(forKey: Pref.scrollTitles))",
+        ]
+        keyParts += [
+            "\(defaults.bool(forKey: Pref.autoScale))",
+            "\(defaults.bool(forKey: Pref.stripBrowserNames))",
+            String(defaults.double(forKey: Pref.gap)),
+            String(defaults.double(forKey: Pref.leftInset)),
+            String(defaults.double(forKey: Pref.maxWidth)),
+            "\(defaults.bool(forKey: Pref.showPanel))",
+            "\(defaults.bool(forKey: Pref.showStatusItem))",
+            "\(defaults.bool(forKey: Pref.customPosition))",
+            "\(defaults.bool(forKey: Pref.lockPosition))",
+            "\(defaults.bool(forKey: Pref.positionSet))",
+            String(defaults.double(forKey: Pref.positionX)),
+            String(defaults.double(forKey: Pref.positionY)),
+            "\(defaults.bool(forKey: Pref.statusItemMirrorsTitle))",
+            defaults.string(forKey: Pref.statusItemIconStyle) ?? "",
+            defaults.string(forKey: Pref.statusItemFontFamily) ?? "",
+            String(defaults.integer(forKey: Pref.statusItemFontTraits)),
+            String(defaults.double(forKey: Pref.statusItemFontSize)),
+        ]
+        let key = keyParts.joined(separator: "\u{1}")
+
+        guard key != lastRenderKey else { return }
+        lastRenderKey = key
         currentInfo = info
 
         let showPanel = defaults.bool(forKey: Pref.showPanel)
@@ -153,6 +206,7 @@ final class BarController: NSObject {
         let barHeight = MenuBarGeometry.height(for: screen)
         let fontSize = CGFloat(defaults.double(forKey: Pref.fontSize))
         let fontFamily = defaults.string(forKey: Pref.fontFamily) ?? ""
+        let fontTraits = defaults.integer(forKey: Pref.fontTraits)
         let iconStyle = IconStyle(rawValue: defaults.string(forKey: Pref.iconStyle) ?? "") ?? .appFont
         let padding = CGFloat(defaults.double(forKey: Pref.padding))
         let letterSpacing = CGFloat(defaults.double(forKey: Pref.letterSpacing))
@@ -193,8 +247,8 @@ final class BarController: NSObject {
             return
         }
 
-        func makeContent(_ size: CGFloat, _ family: String, _ style: IconStyle) -> BarContent {
-            let font = FontResolver.font(family: family, size: size)
+        func makeContent(_ size: CGFloat, _ family: String, _ traits: Int, _ style: IconStyle) -> BarContent {
+            let font = FontResolver.font(family: family, size: size, traits: traits)
             var glyph: NSAttributedString?
             var icon: NSImage?
             switch style {
@@ -227,7 +281,7 @@ final class BarController: NSObject {
             )
         }
 
-        let titleContent = makeContent(fontSize, fontFamily, iconStyle)
+        let titleContent = makeContent(fontSize, fontFamily, fontTraits, iconStyle)
         var size = fontSize
         var content = titleContent
         view.content = content
@@ -237,7 +291,7 @@ final class BarController: NSObject {
             let minimum = max(8, fontSize * 0.6)
             while natural > cap && size > minimum + 0.001 {
                 size = max(minimum, size - 0.5)
-                content = makeContent(size, fontFamily, iconStyle)
+                content = makeContent(size, fontFamily, fontTraits, iconStyle)
                 view.content = content
                 natural = view.naturalWidth(forHeight: barHeight)
             }
@@ -254,6 +308,7 @@ final class BarController: NSObject {
                 statusContent = makeContent(
                     CGFloat(defaults.double(forKey: Pref.statusItemFontSize)),
                     defaults.string(forKey: Pref.statusItemFontFamily) ?? "",
+                    defaults.integer(forKey: Pref.statusItemFontTraits),
                     statusStyle
                 )
             }
@@ -302,6 +357,7 @@ final class BarController: NSObject {
         view.needsDisplay = true
         if !panel.isVisible {
             panel.orderFrontRegardless()
+            view.resumeScrolling()
         }
     }
 
@@ -352,6 +408,7 @@ final class BarController: NSObject {
     }
 
     private func hide() {
+        lastRenderKey = nil
         if panel.isVisible {
             panel.orderOut(nil)
         }

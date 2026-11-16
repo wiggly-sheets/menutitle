@@ -8,13 +8,14 @@ final class SettingsWindow {
     func show() {
         if window == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 480, height: 760),
+                contentRect: NSRect(x: 0, y: 0, width: 780, height: 560),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "MenuTitle"
             window.isReleasedWhenClosed = false
+            window.minSize = NSSize(width: 680, height: 520)
             let hosting = NSHostingView(rootView: SettingsView())
             hosting.frame = window.contentView?.bounds ?? .zero
             hosting.autoresizingMask = [.width, .height]
