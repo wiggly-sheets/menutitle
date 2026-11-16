@@ -168,6 +168,13 @@ final class BarController: NSObject {
             String(defaults.double(forKey: Pref.wordSpacing)),
             defaults.string(forKey: Pref.iconStyle) ?? "",
             defaults.string(forKey: Pref.backgroundStyle) ?? "",
+            "\(defaults.bool(forKey: Pref.useCustomTextColor))",
+            defaults.string(forKey: Pref.textColorHex) ?? "",
+            "\(defaults.bool(forKey: Pref.useCustomBackgroundColor))",
+            defaults.string(forKey: Pref.backgroundColorHex) ?? "",
+            String(defaults.double(forKey: Pref.backgroundOpacity)),
+            String(defaults.double(forKey: Pref.backgroundCornerRadius)),
+            String(defaults.double(forKey: Pref.backgroundInsetY)),
             defaults.string(forKey: Pref.truncationStyle) ?? "",
             String(defaults.integer(forKey: Pref.maxLength)),
             "\(defaults.bool(forKey: Pref.scrollTitles))",
@@ -216,6 +223,15 @@ final class BarController: NSObject {
         let maxWidth = CGFloat(defaults.double(forKey: Pref.maxWidth))
         let truncation = TruncationStyle(rawValue: defaults.string(forKey: Pref.truncationStyle) ?? "") ?? .end
         let background = BarBackgroundStyle(rawValue: defaults.string(forKey: Pref.backgroundStyle) ?? "") ?? .liquidGlass
+        let textColor = defaults.bool(forKey: Pref.useCustomTextColor)
+            ? (NSColor(hex: defaults.string(forKey: Pref.textColorHex) ?? "") ?? .labelColor)
+            : .labelColor
+        let backgroundColor = defaults.bool(forKey: Pref.useCustomBackgroundColor)
+            ? NSColor(hex: defaults.string(forKey: Pref.backgroundColorHex) ?? "")
+            : nil
+        let backgroundOpacity = CGFloat(defaults.double(forKey: Pref.backgroundOpacity))
+        let cornerRadius = CGFloat(defaults.double(forKey: Pref.backgroundCornerRadius))
+        let backgroundInsetY = CGFloat(defaults.double(forKey: Pref.backgroundInsetY))
         let scrolling = defaults.bool(forKey: Pref.scrollTitles)
 
         let cleanedTitle = TitleCleaner.clean(info.title, stripBrowserNames: defaults.bool(forKey: Pref.stripBrowserNames))
@@ -259,7 +275,7 @@ final class BarController: NSObject {
                     let iconFont = NSFont(name: AppIconFont.fontName, size: size + 3) ?? font
                     glyph = NSAttributedString(
                         string: character,
-                        attributes: [.font: iconFont, .foregroundColor: NSColor.labelColor]
+                        attributes: [.font: iconFont, .foregroundColor: textColor]
                     )
                 }
             case .native:
@@ -268,7 +284,7 @@ final class BarController: NSObject {
             return BarContent(
                 title: title,
                 font: font,
-                color: .labelColor,
+                color: textColor,
                 icon: icon,
                 glyph: glyph,
                 padding: padding,
@@ -277,7 +293,11 @@ final class BarController: NSObject {
                 wordSpacing: wordSpacing,
                 truncation: truncation,
                 scrolling: scrolling,
-                background: background
+                background: background,
+                backgroundColor: backgroundColor,
+                backgroundOpacity: backgroundOpacity,
+                cornerRadius: cornerRadius,
+                backgroundInsetY: backgroundInsetY
             )
         }
 
@@ -321,7 +341,6 @@ final class BarController: NSObject {
         if view.isDragging { return }
 
         view.isDraggable = customPosition && !lockPosition
-        updateGlass(background == .liquidGlass)
         let width = min(natural, cap)
 
         let frame: NSRect
@@ -354,6 +373,12 @@ final class BarController: NSObject {
         if panel.frame != frame {
             panel.setFrame(frame, display: true)
         }
+        updateGlass(
+            background == .liquidGlass,
+            tint: backgroundColor,
+            cornerRadius: cornerRadius,
+            insetY: backgroundInsetY
+        )
         view.needsDisplay = true
         if !panel.isVisible {
             panel.orderFrontRegardless()
@@ -361,15 +386,19 @@ final class BarController: NSObject {
         }
     }
 
-    private func updateGlass(_ enabled: Bool) {
+    private func updateGlass(
+        _ enabled: Bool,
+        tint: NSColor?,
+        cornerRadius: CGFloat,
+        insetY: CGFloat
+    ) {
         if enabled {
             if glassHost == nil {
                 if #available(macOS 26.0, *) {
                     let glass = NSGlassEffectView()
                     glass.style = .regular
-                    glass.cornerRadius = 6
+                    glass.cornerRadius = cornerRadius
                     glass.frame = container.bounds
-                    glass.autoresizingMask = [.width, .height]
                     container.addSubview(glass)
                     glassHost = glass
                 } else {
@@ -378,15 +407,23 @@ final class BarController: NSObject {
                     blur.blendingMode = .behindWindow
                     blur.state = .active
                     blur.wantsLayer = true
-                    blur.layer?.cornerRadius = 6
+                    blur.layer?.cornerRadius = cornerRadius
                     blur.layer?.masksToBounds = true
                     blur.frame = container.bounds
-                    blur.autoresizingMask = [.width, .height]
                     container.addSubview(blur)
                     glassHost = blur
                 }
             }
             guard let glassHost else { return }
+
+            glassHost.frame = container.bounds.insetBy(dx: 0, dy: insetY)
+            if #available(macOS 26.0, *), let glass = glassHost as? NSGlassEffectView {
+                glass.cornerRadius = cornerRadius
+                glass.tintColor = tint
+            } else if let blur = glassHost as? NSVisualEffectView {
+                blur.layer?.cornerRadius = cornerRadius
+            }
+
             if view.superview !== glassHost {
                 view.frame = glassHost.bounds
                 view.autoresizingMask = [.width, .height]
@@ -396,6 +433,7 @@ final class BarController: NSObject {
                     glassHost.addSubview(view)
                 }
             }
+            view.frame = glassHost.bounds
             glassHost.isHidden = false
         } else {
             if view.superview !== container {
@@ -403,6 +441,7 @@ final class BarController: NSObject {
                 view.autoresizingMask = [.width, .height]
                 container.addSubview(view)
             }
+            view.frame = container.bounds
             glassHost?.isHidden = true
         }
     }

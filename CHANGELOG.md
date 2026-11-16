@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Custom text and background colors, background opacity, corner radius, and shape height inset.
+
 ## [1.0.0] - 2026-11-16
 
 ### Added

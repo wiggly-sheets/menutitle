@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
@@ -50,6 +51,13 @@ struct SettingsView: View {
     @AppStorage(Pref.maxWidth) private var maxWidth = 360.0
     @AppStorage(Pref.iconStyle) private var iconStyle = IconStyle.appFont.rawValue
     @AppStorage(Pref.backgroundStyle) private var backgroundStyle = BarBackgroundStyle.liquidGlass.rawValue
+    @AppStorage(Pref.useCustomTextColor) private var useCustomTextColor = false
+    @AppStorage(Pref.textColorHex) private var textColorHex = "#FFFFFF"
+    @AppStorage(Pref.useCustomBackgroundColor) private var useCustomBackgroundColor = false
+    @AppStorage(Pref.backgroundColorHex) private var backgroundColorHex = "#1E1E1E"
+    @AppStorage(Pref.backgroundOpacity) private var backgroundOpacity = 0.95
+    @AppStorage(Pref.backgroundCornerRadius) private var backgroundCornerRadius = 6.0
+    @AppStorage(Pref.backgroundInsetY) private var backgroundInsetY = 0.0
     @AppStorage(Pref.truncationStyle) private var truncationStyle = TruncationStyle.end.rawValue
     @AppStorage(Pref.maxLength) private var maxLength = 0
     @AppStorage(Pref.scrollTitles) private var scrollTitles = false
@@ -81,6 +89,20 @@ struct SettingsView: View {
 
     private var previewFont: Font {
         Font(FontResolver.font(family: fontFamily, size: fontSize, traits: fontTraits))
+    }
+
+    private var textColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: NSColor(hex: textColorHex) ?? .labelColor) },
+            set: { textColorHex = NSColor($0).hexRGB }
+        )
+    }
+
+    private var backgroundColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: NSColor(hex: backgroundColorHex) ?? .windowBackgroundColor) },
+            set: { backgroundColorHex = NSColor($0).hexRGB }
+        )
     }
 
     private var placementMode: Binding<PlacementMode> {
@@ -172,9 +194,26 @@ struct SettingsView: View {
                 }
             }
 
+            if backgroundStyle != BarBackgroundStyle.transparent.rawValue {
+                Toggle("Custom background color", isOn: $useCustomBackgroundColor)
+                if useCustomBackgroundColor {
+                    ColorPicker("Background color", selection: backgroundColorBinding, supportsOpacity: false)
+                }
+                sliderRow("Opacity", value: $backgroundOpacity, range: 0...1, step: 0.05, unit: "")
+                sliderRow("Corner radius", value: $backgroundCornerRadius, range: 0...24, unit: "pt")
+                sliderRow("Shape height inset", value: $backgroundInsetY, range: 0...14, unit: "pt")
+            }
+
+            Toggle("Custom text color", isOn: $useCustomTextColor)
+            if useCustomTextColor {
+                ColorPicker("Text color", selection: textColorBinding, supportsOpacity: false)
+            }
+
             HStack {
                 Spacer()
-                Text("Window Title").font(previewFont).foregroundStyle(.secondary)
+                Text("Window Title")
+                    .font(previewFont)
+                    .foregroundColor(useCustomTextColor ? textColorBinding.wrappedValue : .secondary)
                 Spacer()
             }
         } header: {
@@ -183,7 +222,7 @@ struct SettingsView: View {
             if iconStyle == IconStyle.appFont.rawValue && !AppIconFont.shared.loaded {
                 Text("sketchybar-app-font.ttf was not found in ~/Library/Fonts or /Library/Fonts. Choose another icon style or install the font.")
             } else {
-                Text("The font panel sets the family, style, and size. The size slider stays in sync.")
+                Text("The font panel sets the family, style, and size. The size slider stays in sync. Shape height inset makes the background shorter than the menu bar.")
             }
         }
     }

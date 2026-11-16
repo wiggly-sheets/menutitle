@@ -34,7 +34,7 @@ final class StatusItemController: NSObject {
         }
         var attributes: [NSAttributedString.Key: Any] = [
             .font: content.font,
-            .foregroundColor: NSColor.labelColor,
+            .foregroundColor: content.color,
         ]
         if content.letterSpacing != 0 {
             attributes[.kern] = content.letterSpacing

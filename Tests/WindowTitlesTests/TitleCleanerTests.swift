@@ -17,6 +17,10 @@ final class TitleCleanerTests: XCTestCase {
 
     func testKeepsOrdinarySuffixes() {
         XCTAssertEqual(TitleCleaner.clean("Notes – 64 notes", stripBrowserNames: true), "Notes – 64 notes")
+        XCTAssertEqual(
+            TitleCleaner.clean("Page - Profile Settings", stripBrowserNames: true),
+            "Page - Profile Settings"
+        )
     }
 
     func testTruncatesAtEachStyle() {
@@ -29,5 +33,6 @@ final class TitleCleanerTests: XCTestCase {
     func testTruncateDoesNothingWhenOffOrShortEnough() {
         XCTAssertEqual(TitleCleaner.truncate("Short", maxLength: 0, style: .end), "Short")
         XCTAssertEqual(TitleCleaner.truncate("Short", maxLength: 10, style: .end), "Short")
+        XCTAssertEqual(TitleCleaner.truncate("abcdefghij", maxLength: 10, style: .end), "abcdefghij")
     }
 }

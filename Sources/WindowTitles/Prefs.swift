@@ -18,6 +18,13 @@ enum Pref {
     static let hideOnMenuOpen = "hideOnMenuOpen"
     static let stripBrowserNames = "stripBrowserNames"
     static let backgroundStyle = "backgroundStyle"
+    static let useCustomTextColor = "useCustomTextColor"
+    static let textColorHex = "textColorHex"
+    static let useCustomBackgroundColor = "useCustomBackgroundColor"
+    static let backgroundColorHex = "backgroundColorHex"
+    static let backgroundOpacity = "backgroundOpacity"
+    static let backgroundCornerRadius = "backgroundCornerRadius"
+    static let backgroundInsetY = "backgroundInsetY"
     static let leftClickAction = "leftClickAction"
     static let middleClickAction = "middleClickAction"
     static let rightClickAction = "rightClickAction"
@@ -56,6 +63,13 @@ enum Pref {
         hideOnMenuOpen: true,
         stripBrowserNames: false,
         backgroundStyle: BarBackgroundStyle.liquidGlass.rawValue,
+        useCustomTextColor: false,
+        textColorHex: "#FFFFFF",
+        useCustomBackgroundColor: false,
+        backgroundColorHex: "#1E1E1E",
+        backgroundOpacity: 0.95,
+        backgroundCornerRadius: 6.0,
+        backgroundInsetY: 0.0,
         leftClickAction: ClickAction.openSettings.rawValue,
         middleClickAction: ClickAction.none.rawValue,
         rightClickAction: ClickAction.showMenu.rawValue,
@@ -181,5 +195,29 @@ enum FontResolver {
             return font
         }
         return .systemFont(ofSize: size)
+    }
+}
+
+extension NSColor {
+    convenience init?(hex: String) {
+        var value = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.hasPrefix("#") { value.removeFirst() }
+        guard value.count == 6 || value.count == 8,
+              let number = UInt64(value, radix: 16) else { return nil }
+
+        let hasAlpha = value.count == 8
+        let red = CGFloat((number >> (hasAlpha ? 24 : 16)) & 0xFF) / 255
+        let green = CGFloat((number >> (hasAlpha ? 16 : 8)) & 0xFF) / 255
+        let blue = CGFloat((number >> (hasAlpha ? 8 : 0)) & 0xFF) / 255
+        let alpha = hasAlpha ? CGFloat(number & 0xFF) / 255 : 1
+        self.init(srgbRed: red, green: green, blue: blue, alpha: alpha)
+    }
+
+    var hexRGB: String {
+        guard let color = usingColorSpace(.sRGB) else { return "#FFFFFF" }
+        let red = Int((color.redComponent * 255).rounded())
+        let green = Int((color.greenComponent * 255).rounded())
+        let blue = Int((color.blueComponent * 255).rounded())
+        return String(format: "#%02X%02X%02X", red, green, blue)
     }
 }

@@ -13,6 +13,10 @@ struct BarContent {
     var truncation: TruncationStyle
     var scrolling: Bool
     var background: BarBackgroundStyle
+    var backgroundColor: NSColor?
+    var backgroundOpacity: CGFloat
+    var cornerRadius: CGFloat
+    var backgroundInsetY: CGFloat
 }
 
 final class BarView: NSView {
@@ -104,7 +108,7 @@ final class BarView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let content else { return }
 
-        drawBackground(content.background)
+        drawBackground(content)
 
         var x = content.padding
         if let icon = content.icon {
@@ -156,16 +160,22 @@ final class BarView: NSView {
         return attributed
     }
 
-    private func drawBackground(_ style: BarBackgroundStyle) {
-        guard style == .solid || style == .outline else { return }
-        let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
-        let path = NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6)
-        switch style {
+    private func drawBackground(_ content: BarContent) {
+        guard content.background == .solid || content.background == .outline else { return }
+        let rect = bounds.insetBy(dx: 0.5, dy: content.backgroundInsetY + 0.5)
+        guard rect.width > 0, rect.height > 0 else { return }
+        let radius = min(content.cornerRadius, rect.height / 2)
+        let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        switch content.background {
         case .solid:
-            NSColor.windowBackgroundColor.withAlphaComponent(0.95).setFill()
+            (content.backgroundColor ?? .windowBackgroundColor)
+                .withAlphaComponent(content.backgroundOpacity)
+                .setFill()
             path.fill()
         case .outline:
-            NSColor.separatorColor.setStroke()
+            (content.backgroundColor ?? .separatorColor)
+                .withAlphaComponent(content.backgroundOpacity)
+                .setStroke()
             path.lineWidth = 1
             path.stroke()
         case .liquidGlass, .transparent:
