@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-16
+
 ### Added
 - An adjustable scroll speed for long titles, from 10 to 120 points per second.
 - Browser and profile name stripping now detects browsers at runtime, matches each app's own title suffix, and accepts a custom comma-separated suffix list.
