@@ -23,6 +23,7 @@ enum Pref {
     static let autoScale = "autoScale"
     static let hideOnMenuOpen = "hideOnMenuOpen"
     static let stripBrowserNames = "stripBrowserNames"
+    static let customBrowserSuffixes = "customBrowserSuffixes"
     static let backgroundStyle = "backgroundStyle"
     static let useCustomTextColor = "useCustomTextColor"
     static let textColorHex = "textColorHex"
@@ -76,6 +77,7 @@ enum Pref {
         autoScale: false,
         hideOnMenuOpen: true,
         stripBrowserNames: false,
+        customBrowserSuffixes: "",
         backgroundStyle: BarBackgroundStyle.liquidGlass.rawValue,
         useCustomTextColor: false,
         textColorHex: "#FFFFFF",

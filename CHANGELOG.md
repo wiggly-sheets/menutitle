@@ -34,6 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - App icon styles: sketchybar app font glyph, native app icon, or none.
 - Liquid glass, solid, transparent, and outline backgrounds.
 - Title shortening at the beginning, middle, or end, a character limit, scrolling with an adjustable speed, and shrink to fit.
-- Optional removal of browser and profile names from window titles.
+- Optional removal of browser and profile names from window titles, with browser detection at runtime and custom suffixes.
 - Configurable left, middle, and right click actions for the title and the menu bar item.
 - Launch at login and Accessibility permission status in settings.

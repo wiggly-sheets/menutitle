@@ -66,7 +66,7 @@ The title moves as menus change width and stops before the notch or the next men
 - Cap the title by character count.
 - Scroll long titles instead of shortening them, with a speed setting.
 - Shrink the font before shortening.
-- Optionally strip browser names and profile suffixes that browsers append.
+- Optionally strip browser names and profile suffixes. Browsers are detected from the focused app and its link handlers, so new browsers work without a list. Add custom suffixes for the rest.
 
 ### Appearance
 

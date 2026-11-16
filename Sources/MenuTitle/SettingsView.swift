@@ -70,6 +70,7 @@ struct SettingsView: View {
     @AppStorage(Pref.autoScale) private var autoScale = false
     @AppStorage(Pref.hideOnMenuOpen) private var hideOnMenuOpen = true
     @AppStorage(Pref.stripBrowserNames) private var stripBrowserNames = false
+    @AppStorage(Pref.customBrowserSuffixes) private var customBrowserSuffixes = ""
     @AppStorage(Pref.leftClickAction) private var leftClickAction = ClickAction.openSettings.rawValue
     @AppStorage(Pref.middleClickAction) private var middleClickAction = ClickAction.none.rawValue
     @AppStorage(Pref.rightClickAction) private var rightClickAction = ClickAction.showMenu.rawValue
@@ -399,10 +400,17 @@ struct SettingsView: View {
             Toggle("Shrink text to fit", isOn: $autoScale)
             Toggle("Hide while a menu bar menu is open", isOn: $hideOnMenuOpen)
             Toggle("Strip browser and profile names", isOn: $stripBrowserNames)
+            if stripBrowserNames {
+                TextField(
+                    "Custom suffixes",
+                    text: $customBrowserSuffixes,
+                    prompt: Text("Comma separated, e.g. YouTube, Notion")
+                )
+            }
         } header: {
             Text("Long titles")
         } footer: {
-            Text("Max length counts characters and applies when scrolling is off. Scrolling moves a title that is wider than the space available. Shrink text to fit reduces the font size before shortening. Scroll speed sets how fast the title moves.")
+            Text("Max length counts characters and applies when scrolling is off. Scrolling moves a title that is wider than the space available. Shrink text to fit reduces the font size before shortening. Scroll speed sets how fast the title moves. Browser names are detected from the window's app. Custom suffixes apply only in browsers.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

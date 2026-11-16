@@ -221,6 +221,7 @@ final class BarController: NSObject {
         keyParts += [
             "\(defaults.bool(forKey: Pref.autoScale))",
             "\(defaults.bool(forKey: Pref.stripBrowserNames))",
+            defaults.string(forKey: Pref.customBrowserSuffixes) ?? "",
             String(defaults.double(forKey: Pref.gap)),
             String(defaults.double(forKey: Pref.leftInset)),
             String(defaults.double(forKey: Pref.maxWidth)),
@@ -277,7 +278,16 @@ final class BarController: NSObject {
         let scrolling = defaults.bool(forKey: Pref.scrollTitles)
         let scrollSpeed = CGFloat(defaults.double(forKey: Pref.scrollSpeed))
 
-        let cleanedTitle = TitleCleaner.clean(info.title, stripBrowserNames: defaults.bool(forKey: Pref.stripBrowserNames))
+        let browserContext = BrowserDetector.context(
+            appName: info.app,
+            pid: info.pid,
+            customSuffixesText: defaults.string(forKey: Pref.customBrowserSuffixes) ?? ""
+        )
+        let cleanedTitle = TitleCleaner.clean(
+            info.title,
+            stripBrowserNames: defaults.bool(forKey: Pref.stripBrowserNames),
+            context: browserContext
+        )
         let title = scrolling
             ? cleanedTitle
             : TitleCleaner.truncate(cleanedTitle, maxLength: defaults.integer(forKey: Pref.maxLength), style: truncation)
