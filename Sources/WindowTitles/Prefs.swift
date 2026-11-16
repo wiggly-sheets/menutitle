@@ -14,6 +14,7 @@ enum Pref {
     static let maxLength = "maxLength"
     static let scrollTitles = "scrollTitles"
     static let autoScale = "autoScale"
+    static let hideOnMenuOpen = "hideOnMenuOpen"
     static let stripBrowserNames = "stripBrowserNames"
     static let backgroundStyle = "backgroundStyle"
 
@@ -31,6 +32,7 @@ enum Pref {
         maxLength: 0,
         scrollTitles: false,
         autoScale: false,
+        hideOnMenuOpen: true,
         stripBrowserNames: false,
         backgroundStyle: BarBackgroundStyle.liquidGlass.rawValue,
     ]

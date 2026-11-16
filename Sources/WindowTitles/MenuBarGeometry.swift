@@ -73,7 +73,8 @@ enum MenuBarGeometry {
         return screens.first { $0.frame.contains(appKitPoint) } ?? NSScreen.main ?? primary
     }
 
-    /// True when the given app has a popup or menu window on screen.
+    /// True when the given app has a menu bar menu open. Menus that drop from
+    /// the menu bar start at the top of the screen; other popups are ignored.
     static func hasOpenMenu(pid: pid_t?) -> Bool {
         guard let pid,
               let windows = CGWindowListCopyWindowInfo(
@@ -86,6 +87,7 @@ enum MenuBarGeometry {
             guard let layer = window[kCGWindowLayer as String] as? Int, layer >= menuLevel,
                   let owner = window[kCGWindowOwnerPID as String] as? Int, owner == Int(pid),
                   let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+                  let y = (bounds["Y"] as? NSNumber)?.doubleValue, y < 20,
                   let width = (bounds["Width"] as? NSNumber)?.doubleValue,
                   let height = (bounds["Height"] as? NSNumber)?.doubleValue,
                   width > 40, height > 20 else { continue }

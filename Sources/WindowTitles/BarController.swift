@@ -79,7 +79,8 @@ final class BarController: NSObject {
 
     private func updateMenuState() {
         let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        let open = MenuBarGeometry.hasOpenMenu(pid: frontPid)
+        let hides = UserDefaults.standard.bool(forKey: Pref.hideOnMenuOpen)
+        let open = hides && MenuBarGeometry.hasOpenMenu(pid: frontPid)
         guard open != menuOpen else { return }
         menuOpen = open
         if open {

@@ -10,8 +10,8 @@ part of the menu bar, after the front app's menus.
 - Moves as the front app's menus change width, so the title stays clear of the
   native menus.
 - Stops at the notch on MacBook displays and at other menu bar items.
-- Hides while a native menu is open, then returns and keeps the front app
-  focused.
+- Optionally hides while a menu bar menu is open, then returns and keeps the
+  front app focused.
 - Shortens long titles at the beginning, middle, or end, with a character
   limit, by shrinking the text, or by scrolling it.
 - Can remove browser and profile names that browsers append to window titles.

@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage(Pref.maxLength) private var maxLength = 0
     @AppStorage(Pref.scrollTitles) private var scrollTitles = false
     @AppStorage(Pref.autoScale) private var autoScale = false
+    @AppStorage(Pref.hideOnMenuOpen) private var hideOnMenuOpen = true
     @AppStorage(Pref.stripBrowserNames) private var stripBrowserNames = false
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
@@ -98,6 +99,7 @@ struct SettingsView: View {
 
                 Toggle("Scroll long titles", isOn: $scrollTitles)
                 Toggle("Shrink text to fit", isOn: $autoScale)
+                Toggle("Hide while a menu bar menu is open", isOn: $hideOnMenuOpen)
                 Toggle("Strip browser and profile names", isOn: $stripBrowserNames)
             } header: {
                 Text("Title")
