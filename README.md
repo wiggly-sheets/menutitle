@@ -17,6 +17,12 @@ part of the menu bar, after the front app's menus.
 - Can remove browser and profile names that browsers append to window titles.
 - Optional app icon: sketchybar app font glyph, native app icon, or none.
 - Background styles: liquid glass, solid, transparent, outline.
+- Configurable left, middle, and right click actions: open settings, show the
+  app menu, focus, hide, minimize, or quit the shown app.
+- Optional custom position: drag the title anywhere on screen and lock it. The
+  position is remembered.
+- Optional menu bar item on the right side that shows the same title, icon, and
+  click actions.
 - Settings for font, font size, padding, letter spacing, word spacing, gap,
   left inset, and maximum width.
 - Launch at login.
@@ -50,8 +56,13 @@ stable identity.
 
 ## Using it
 
-- Left click the title to open settings.
-- Right click the title for Settings, Refresh, and Quit.
+- Left click defaults to opening settings. Middle and right clicks can be set
+  to different actions in the `Clicking` settings section.
+- Enable `Use custom position` to drag the title anywhere on screen. Turn on
+  `Lock position` to keep clicks from moving it.
+- Enable `Show menu bar item` for a right-side menu bar item with the same
+  title and actions. `Show title bar` can be turned off if only the item is
+  wanted.
 - Settings changes apply within a second.
 
 ## Icons
@@ -92,4 +103,7 @@ setting to push the native title past the sketchybar items.
   immediate refresh.
 - Only yabai's focused window is shown. Spaces without a focused window have no
   title.
+- The custom position is a single saved point, not one per display.
+- The menu bar item is hidden when the front app is MenuTitle itself or when
+  Accessibility access is missing.
 - The app is an accessory app: it has no Dock icon and no app menu of its own.

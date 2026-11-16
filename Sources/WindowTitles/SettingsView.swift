@@ -19,6 +19,13 @@ struct SettingsView: View {
     @AppStorage(Pref.autoScale) private var autoScale = false
     @AppStorage(Pref.hideOnMenuOpen) private var hideOnMenuOpen = true
     @AppStorage(Pref.stripBrowserNames) private var stripBrowserNames = false
+    @AppStorage(Pref.leftClickAction) private var leftClickAction = ClickAction.openSettings.rawValue
+    @AppStorage(Pref.middleClickAction) private var middleClickAction = ClickAction.none.rawValue
+    @AppStorage(Pref.rightClickAction) private var rightClickAction = ClickAction.showMenu.rawValue
+    @AppStorage(Pref.showPanel) private var showPanel = true
+    @AppStorage(Pref.showStatusItem) private var showStatusItem = false
+    @AppStorage(Pref.customPosition) private var customPosition = false
+    @AppStorage(Pref.lockPosition) private var lockPosition = false
 
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var loginError: String?
@@ -71,6 +78,44 @@ struct SettingsView: View {
                 if iconStyle == IconStyle.appFont.rawValue && !AppIconFont.shared.loaded {
                     Text("sketchybar-app-font.ttf was not found in ~/Library/Fonts or /Library/Fonts. Choose another icon style or install the font.")
                 }
+            }
+
+            Section {
+                Toggle("Show title bar", isOn: $showPanel)
+                Toggle("Show menu bar item", isOn: $showStatusItem)
+                Toggle("Use custom position", isOn: $customPosition)
+                if customPosition {
+                    Toggle("Lock position", isOn: $lockPosition)
+                    Text("Drag the title to move it. The position is remembered.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Placement")
+            } footer: {
+                Text("The menu bar item uses the same title, icon, and click settings.")
+            }
+
+            Section {
+                Picker("Left click", selection: $leftClickAction) {
+                    ForEach(ClickAction.allCases) { action in
+                        Text(action.title).tag(action.rawValue)
+                    }
+                }
+                Picker("Middle click", selection: $middleClickAction) {
+                    ForEach(ClickAction.allCases) { action in
+                        Text(action.title).tag(action.rawValue)
+                    }
+                }
+                Picker("Right click", selection: $rightClickAction) {
+                    ForEach(ClickAction.allCases) { action in
+                        Text(action.title).tag(action.rawValue)
+                    }
+                }
+            } header: {
+                Text("Clicking")
+            } footer: {
+                Text("App actions apply to the app that owns the shown window.")
             }
 
             Section {

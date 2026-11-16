@@ -16,6 +16,8 @@ final class BarController: NSObject {
     private let view = BarView()
     private var glassHost: NSView?
     private let queue = DispatchQueue(label: "com.zeb.windowtitles.query")
+    private let statusItem = StatusItemController()
+    private var currentInfo: FrontWindowInfo?
     private var timer: Timer?
     private var menuTimer: Timer?
     private var menuOpen = false
@@ -45,8 +47,11 @@ final class BarController: NSObject {
         container.addSubview(view)
         panel.contentView = container
 
-        view.onLeftClick = { SettingsWindow.shared.show() }
-        view.onRightClick = { [weak self] point in self?.showMenu(at: point) }
+        view.onLeftClick = { [weak self] in self?.performClick(button: 0) }
+        view.onMiddleClick = { [weak self] in self?.performClick(button: 2) }
+        view.onRightClick = { [weak self] point in self?.performClick(button: 1, panelPoint: point) }
+        view.onDragEnd = { [weak self] origin in self?.savePosition(origin) }
+        statusItem.onAction = { [weak self] number in self?.performStatusClick(button: number) }
     }
 
     func start() {
@@ -93,6 +98,7 @@ final class BarController: NSObject {
     @objc func refresh() {
         guard AXIsProcessTrusted() else {
             hide()
+            statusItem.update(nil)
             return
         }
 
@@ -100,6 +106,7 @@ final class BarController: NSObject {
         guard let frontPid = frontmost?.processIdentifier,
               frontPid != ProcessInfo.processInfo.processIdentifier else {
             hide()
+            statusItem.update(nil)
             return
         }
 
@@ -125,17 +132,24 @@ final class BarController: NSObject {
     }
 
     private func apply(info: FrontWindowInfo?, menuBar: MenuBarGeometry.MenuBar?) {
+        let defaults = UserDefaults.standard
         guard let info,
               !info.title.isEmpty,
               !info.fullscreen,
-              !menuOpen,
               let menuBar,
               let screen = MenuBarGeometry.screen(forAXPoint: menuBar.anchor) else {
             hide()
+            statusItem.update(nil)
             return
         }
+        currentInfo = info
 
-        let defaults = UserDefaults.standard
+        let showPanel = defaults.bool(forKey: Pref.showPanel)
+        let showStatusItem = defaults.bool(forKey: Pref.showStatusItem)
+        let customPosition = defaults.bool(forKey: Pref.customPosition)
+        let lockPosition = defaults.bool(forKey: Pref.lockPosition)
+        let positionSet = defaults.bool(forKey: Pref.positionSet)
+
         let barHeight = MenuBarGeometry.height(for: screen)
         let fontSize = CGFloat(defaults.double(forKey: Pref.fontSize))
         let fontFamily = defaults.string(forKey: Pref.fontFamily) ?? ""
@@ -157,20 +171,25 @@ final class BarController: NSObject {
 
         let x = max(menuBar.endX + gap + inset, screen.frame.minX + 2)
         var cap = maxWidth
-        if let notch = MenuBarGeometry.notchLeftX(for: screen), x < notch {
-            cap = min(cap, notch - x - gap)
+        if customPosition {
+            cap = min(cap, screen.frame.width - 4)
+        } else {
+            if let notch = MenuBarGeometry.notchLeftX(for: screen), x < notch {
+                cap = min(cap, notch - x - gap)
+            }
+            if let limit = MenuBarGeometry.leftmostObstructionX(
+                screen: screen,
+                barHeight: barHeight,
+                afterX: x,
+                excludingPid: ProcessInfo.processInfo.processIdentifier
+            ) {
+                cap = min(cap, limit - x - gap)
+            }
+            cap = min(cap, screen.frame.maxX - x - 2)
         }
-        if let limit = MenuBarGeometry.leftmostObstructionX(
-            screen: screen,
-            barHeight: barHeight,
-            afterX: x,
-            excludingPid: ProcessInfo.processInfo.processIdentifier
-        ) {
-            cap = min(cap, limit - x - gap)
-        }
-        cap = min(cap, screen.frame.maxX - x - 2)
         guard cap >= 40 else {
             hide()
+            statusItem.update(nil)
             return
         }
 
@@ -219,15 +238,44 @@ final class BarController: NSObject {
             }
         }
 
+        statusItem.update(showStatusItem ? content : nil)
+        guard showPanel, !menuOpen else {
+            hide()
+            return
+        }
+        if view.isDragging { return }
+
+        view.isDraggable = customPosition && !lockPosition
         updateGlass(background == .liquidGlass)
         let width = min(natural, cap)
 
-        let frame = NSRect(
-            x: x,
-            y: screen.frame.maxY - barHeight,
-            width: width,
-            height: barHeight
-        )
+        let frame: NSRect
+        if customPosition {
+            var origin: NSPoint
+            if positionSet {
+                origin = NSPoint(
+                    x: defaults.double(forKey: Pref.positionX),
+                    y: defaults.double(forKey: Pref.positionY)
+                )
+            } else {
+                origin = NSPoint(x: x, y: screen.frame.maxY - barHeight)
+                defaults.set(origin.x, forKey: Pref.positionX)
+                defaults.set(origin.y, forKey: Pref.positionY)
+                defaults.set(true, forKey: Pref.positionSet)
+            }
+            let target = NSScreen.screens.first { $0.frame.contains(origin) } ?? screen
+            origin.x = min(max(origin.x, target.frame.minX), target.frame.maxX - width)
+            origin.y = min(max(origin.y, target.frame.minY), target.frame.maxY - barHeight)
+            frame = NSRect(origin: origin, size: NSSize(width: width, height: barHeight))
+        } else {
+            frame = NSRect(
+                x: x,
+                y: screen.frame.maxY - barHeight,
+                width: width,
+                height: barHeight
+            )
+        }
+
         if panel.frame != frame {
             panel.setFrame(frame, display: true)
         }
@@ -289,7 +337,73 @@ final class BarController: NSObject {
         }
     }
 
-    private func showMenu(at point: NSPoint) {
+    private func clickAction(button: Int) -> ClickAction {
+        let key: String
+        switch button {
+        case 0: key = Pref.leftClickAction
+        case 1: key = Pref.rightClickAction
+        case 2: key = Pref.middleClickAction
+        default: return .none
+        }
+        return ClickAction(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .none
+    }
+
+    private func performClick(button: Int, panelPoint: NSPoint = .zero) {
+        perform(clickAction(button: button), point: panelPoint, target: view)
+    }
+
+    private func performStatusClick(button: Int) {
+        perform(clickAction(button: button), point: statusItem.menuPoint, target: statusItem.anchorView)
+    }
+
+    private func perform(_ action: ClickAction, point: NSPoint, target: NSView?) {
+        switch action {
+        case .none:
+            return
+        case .openSettings:
+            SettingsWindow.shared.show()
+        case .showMenu:
+            if let target {
+                showMenu(at: point, in: target)
+            }
+        case .focusApp:
+            frontApp?.activate()
+        case .hideApp:
+            frontApp?.hide()
+        case .minimizeApp:
+            minimizeCurrentWindow()
+        case .quitApp:
+            frontApp?.terminate()
+        }
+    }
+
+    private var frontApp: NSRunningApplication? {
+        currentInfo.flatMap { NSRunningApplication(processIdentifier: $0.pid) }
+    }
+
+    private func minimizeCurrentWindow() {
+        guard let pid = currentInfo?.pid else { return }
+        let element = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(element, 0.25)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXFocusedWindowAttribute as CFString, &value) == .success,
+              let value,
+              CFGetTypeID(value) == AXUIElementGetTypeID() else { return }
+        AXUIElementSetAttributeValue(
+            value as! AXUIElement,
+            kAXMinimizedAttribute as CFString,
+            kCFBooleanTrue
+        )
+    }
+
+    private func savePosition(_ origin: NSPoint) {
+        let defaults = UserDefaults.standard
+        defaults.set(origin.x, forKey: Pref.positionX)
+        defaults.set(origin.y, forKey: Pref.positionY)
+        defaults.set(true, forKey: Pref.positionSet)
+    }
+
+    private func showMenu(at point: NSPoint, in target: NSView) {
         let menu = NSMenu()
 
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
@@ -307,7 +421,7 @@ final class BarController: NSObject {
         menu.addItem(quit)
 
         let previous = NSWorkspace.shared.frontmostApplication
-        menu.popUp(positioning: nil, at: point, in: view)
+        menu.popUp(positioning: nil, at: point, in: target)
         if let previous, previous.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             previous.activate()
         }

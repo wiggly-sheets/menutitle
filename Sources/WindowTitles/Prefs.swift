@@ -17,6 +17,16 @@ enum Pref {
     static let hideOnMenuOpen = "hideOnMenuOpen"
     static let stripBrowserNames = "stripBrowserNames"
     static let backgroundStyle = "backgroundStyle"
+    static let leftClickAction = "leftClickAction"
+    static let middleClickAction = "middleClickAction"
+    static let rightClickAction = "rightClickAction"
+    static let showPanel = "showPanel"
+    static let showStatusItem = "showStatusItem"
+    static let customPosition = "customPosition"
+    static let lockPosition = "lockPosition"
+    static let positionSet = "positionSet"
+    static let positionX = "positionX"
+    static let positionY = "positionY"
 
     static let defaults: [String: Any] = [
         fontFamily: "Liga SFMono Nerd Font",
@@ -35,6 +45,16 @@ enum Pref {
         hideOnMenuOpen: true,
         stripBrowserNames: false,
         backgroundStyle: BarBackgroundStyle.liquidGlass.rawValue,
+        leftClickAction: ClickAction.openSettings.rawValue,
+        middleClickAction: ClickAction.none.rawValue,
+        rightClickAction: ClickAction.showMenu.rawValue,
+        showPanel: true,
+        showStatusItem: false,
+        customPosition: false,
+        lockPosition: false,
+        positionSet: false,
+        positionX: 0.0,
+        positionY: 0.0,
     ]
 }
 
@@ -84,6 +104,30 @@ enum IconStyle: String, CaseIterable, Identifiable {
         case .none: return "None"
         case .appFont: return "Sketchybar app font"
         case .native: return "Native app icon"
+        }
+    }
+}
+
+enum ClickAction: String, CaseIterable, Identifiable {
+    case none
+    case openSettings
+    case showMenu
+    case focusApp
+    case hideApp
+    case minimizeApp
+    case quitApp
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none: return "None"
+        case .openSettings: return "Open settings"
+        case .showMenu: return "Show MenuTitle menu"
+        case .focusApp: return "Focus app"
+        case .hideApp: return "Hide app"
+        case .minimizeApp: return "Minimize app"
+        case .quitApp: return "Quit app"
         }
     }
 }

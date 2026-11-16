@@ -26,7 +26,13 @@ final class BarView: NSView {
         }
     }
     var onLeftClick: (() -> Void)?
+    var onMiddleClick: (() -> Void)?
     var onRightClick: ((NSPoint) -> Void)?
+    var onDragEnd: ((NSPoint) -> Void)?
+    var isDraggable = false
+    private(set) var isDragging = false
+    private var mouseStart: NSPoint?
+    private var originStart: NSPoint?
 
     private var scrollTimer: Timer?
     private var scrollOffset: CGFloat = 0
@@ -222,7 +228,40 @@ final class BarView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
-        onLeftClick?()
+        mouseStart = NSEvent.mouseLocation
+        originStart = window?.frame.origin
+        isDragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard isDraggable, let mouseStart, let originStart, let window else { return }
+        let now = NSEvent.mouseLocation
+        let dx = now.x - mouseStart.x
+        let dy = now.y - mouseStart.y
+        if abs(dx) > 3 || abs(dy) > 3 { isDragging = true }
+        guard isDragging else { return }
+        window.setFrameOrigin(NSPoint(x: originStart.x + dx, y: originStart.y + dy))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        defer {
+            isDragging = false
+            mouseStart = nil
+            originStart = nil
+        }
+        if isDragging, let origin = window?.frame.origin {
+            onDragEnd?(origin)
+        } else {
+            onLeftClick?()
+        }
+    }
+
+    override func otherMouseDown(with event: NSEvent) {
+        if event.buttonNumber == 2 {
+            onMiddleClick?()
+        } else {
+            super.otherMouseDown(with: event)
+        }
     }
 
     override func rightMouseDown(with event: NSEvent) {
