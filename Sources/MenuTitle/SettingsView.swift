@@ -66,6 +66,7 @@ struct SettingsView: View {
     @AppStorage(Pref.truncationStyle) private var truncationStyle = TruncationStyle.end.rawValue
     @AppStorage(Pref.maxLength) private var maxLength = 0
     @AppStorage(Pref.scrollTitles) private var scrollTitles = false
+    @AppStorage(Pref.scrollSpeed) private var scrollSpeed = 30.0
     @AppStorage(Pref.autoScale) private var autoScale = false
     @AppStorage(Pref.hideOnMenuOpen) private var hideOnMenuOpen = true
     @AppStorage(Pref.stripBrowserNames) private var stripBrowserNames = false
@@ -392,13 +393,16 @@ struct SettingsView: View {
             }
 
             Toggle("Scroll long titles", isOn: $scrollTitles)
+            if scrollTitles {
+                sliderRow("Scroll speed", value: $scrollSpeed, range: 10...120, step: 5, unit: "pt/s")
+            }
             Toggle("Shrink text to fit", isOn: $autoScale)
             Toggle("Hide while a menu bar menu is open", isOn: $hideOnMenuOpen)
             Toggle("Strip browser and profile names", isOn: $stripBrowserNames)
         } header: {
             Text("Long titles")
         } footer: {
-            Text("Max length counts characters and applies when scrolling is off. Scrolling moves a title that is wider than the space available. Shrink text to fit reduces the font size before shortening.")
+            Text("Max length counts characters and applies when scrolling is off. Scrolling moves a title that is wider than the space available. Shrink text to fit reduces the font size before shortening. Scroll speed sets how fast the title moves.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

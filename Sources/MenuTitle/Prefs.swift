@@ -19,6 +19,7 @@ enum Pref {
     static let truncationStyle = "truncationStyle"
     static let maxLength = "maxLength"
     static let scrollTitles = "scrollTitles"
+    static let scrollSpeed = "scrollSpeed"
     static let autoScale = "autoScale"
     static let hideOnMenuOpen = "hideOnMenuOpen"
     static let stripBrowserNames = "stripBrowserNames"
@@ -71,6 +72,7 @@ enum Pref {
         truncationStyle: TruncationStyle.end.rawValue,
         maxLength: 0,
         scrollTitles: false,
+        scrollSpeed: 30.0,
         autoScale: false,
         hideOnMenuOpen: true,
         stripBrowserNames: false,

@@ -216,6 +216,7 @@ final class BarController: NSObject {
             defaults.string(forKey: Pref.truncationStyle) ?? "",
             String(defaults.integer(forKey: Pref.maxLength)),
             "\(defaults.bool(forKey: Pref.scrollTitles))",
+            String(defaults.double(forKey: Pref.scrollSpeed)),
         ]
         keyParts += [
             "\(defaults.bool(forKey: Pref.autoScale))",
@@ -274,6 +275,7 @@ final class BarController: NSObject {
         let cornerRadius = CGFloat(defaults.double(forKey: Pref.backgroundCornerRadius))
         let backgroundInsetY = CGFloat(defaults.double(forKey: Pref.backgroundInsetY))
         let scrolling = defaults.bool(forKey: Pref.scrollTitles)
+        let scrollSpeed = CGFloat(defaults.double(forKey: Pref.scrollSpeed))
 
         let cleanedTitle = TitleCleaner.clean(info.title, stripBrowserNames: defaults.bool(forKey: Pref.stripBrowserNames))
         let title = scrolling
@@ -336,6 +338,7 @@ final class BarController: NSObject {
                 wordSpacing: wordSpacing,
                 truncation: truncation,
                 scrolling: scrolling,
+                scrollSpeed: scrollSpeed,
                 background: background,
                 backgroundColor: backgroundColor,
                 backgroundOpacity: backgroundOpacity,

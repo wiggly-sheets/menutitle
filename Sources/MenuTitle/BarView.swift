@@ -15,6 +15,7 @@ struct BarContent {
     var wordSpacing: CGFloat
     var truncation: TruncationStyle
     var scrolling: Bool
+    var scrollSpeed: CGFloat
     var background: BarBackgroundStyle
     var backgroundColor: NSColor?
     var backgroundOpacity: CGFloat
@@ -27,6 +28,10 @@ final class BarView: NSView {
         didSet {
             if oldValue?.title != content?.title || oldValue?.scrolling != content?.scrolling {
                 scrollOffset = 0
+            }
+            if oldValue?.scrollSpeed != content?.scrollSpeed {
+                scrollTimer?.invalidate()
+                scrollTimer = nil
             }
             needsDisplay = true
             updateScrolling()
@@ -103,8 +108,8 @@ final class BarView: NSView {
         guard scrollTimer == nil else { return }
 
         let timer = Timer(timeInterval: 1.0 / 24.0, repeats: true) { [weak self] _ in
-            guard let self, self.window?.isVisible == true else { return }
-            self.scrollOffset += 1.25
+            guard let self, let content = self.content, self.window?.isVisible == true else { return }
+            self.scrollOffset += content.scrollSpeed / 24.0
             self.needsDisplay = true
         }
         RunLoop.main.add(timer, forMode: .common)

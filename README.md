@@ -64,7 +64,7 @@ The title moves as menus change width and stops before the notch or the next men
 
 - Shorten long titles at the beginning, middle, or end.
 - Cap the title by character count.
-- Scroll long titles instead of shortening them.
+- Scroll long titles instead of shortening them, with a speed setting.
 - Shrink the font before shortening.
 - Optionally strip browser names and profile suffixes that browsers append.
 
