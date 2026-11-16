@@ -270,6 +270,7 @@ Found a security issue? Open an issue or contact the maintainer privately.
 - The custom position is saved for each display.
 - MenuTitle checks for yabai at launch. Without it, the app explains what to install and then quits.
 - The menu bar item hides when the front app is MenuTitle itself or when Accessibility access is missing.
+- After sleep or wake, the title moves back to the active Space.
 - MenuTitle is an accessory app: no Dock icon and no app menu of its own.
 - If sketchybar still shows its `window_title` item in the same area, the two overlap. Remove that item or use the **Left inset** setting.
 

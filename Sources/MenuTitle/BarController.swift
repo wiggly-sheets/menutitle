@@ -11,7 +11,7 @@ final class BarPanel: NSPanel {
 }
 
 final class BarController: NSObject {
-    private let panel: BarPanel
+    private var panel: BarPanel
     private let container = NSView()
     private let view = BarView()
     private var glassHost: NSView?
@@ -29,6 +29,7 @@ final class BarController: NSObject {
     private var lastFrontPid: pid_t?
     private var settleDeadline = Date.distantPast
     private var retryCount = 0
+    private var lastPanelRebuild = Date.distantPast
 
     override init() {
         panel = BarPanel(
@@ -38,15 +39,7 @@ final class BarController: NSObject {
             defer: false
         )
         super.init()
-
-        panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-        panel.hidesOnDeactivate = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.animationBehavior = .none
+        configurePanel(panel)
 
         view.frame = container.bounds
         view.autoresizingMask = [.width, .height]
@@ -58,6 +51,58 @@ final class BarController: NSObject {
         view.onRightClick = { [weak self] point in self?.performClick(button: 1, panelPoint: point) }
         view.onDragEnd = { [weak self] origin in self?.savePosition(origin) }
         statusItem.onAction = { [weak self] number in self?.performStatusClick(button: number) }
+    }
+
+    private func configurePanel(_ target: BarPanel) {
+        target.isFloatingPanel = true
+        target.level = .statusBar
+        target.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        target.hidesOnDeactivate = false
+        target.isOpaque = false
+        target.backgroundColor = .clear
+        target.hasShadow = false
+        target.animationBehavior = .none
+    }
+
+    // Sleep, wake, and login screen switching can strand the panel on a Space
+    // that no longer exists. Only a new window is placed on the active Space.
+    private func rebuildPanel() {
+        guard Date().timeIntervalSince(lastPanelRebuild) > 1 else { return }
+        lastPanelRebuild = Date()
+        let wasVisible = panel.isVisible
+        let old = panel
+        let replacement = BarPanel(
+            contentRect: old.frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        configurePanel(replacement)
+        replacement.contentView = container
+        panel = replacement
+        old.contentView = nil
+        old.orderOut(nil)
+        lastRenderKey = nil
+        if wasVisible {
+            replacement.alphaValue = 0
+            replacement.orderFrontRegardless()
+            scheduleRefresh(after: 0.05)
+        }
+    }
+
+    private func ensureOnActiveSpace() {
+        guard panel.isVisible, !panel.isOnActiveSpace else { return }
+        rebuildPanel()
+    }
+
+    @objc private func systemDidWake() {
+        observer.stop()
+        lastFrontPid = nil
+        lastRenderKey = nil
+        retryCount = 0
+        settleDeadline = .distantPast
+        rebuildPanel()
+        scheduleRefresh(after: 0.5)
     }
 
     func start() {
@@ -79,6 +124,18 @@ final class BarController: NSObject {
             name: AppIconFont.didChangeNotification,
             object: nil
         )
+        for name in [
+            NSWorkspace.didWakeNotification,
+            NSWorkspace.screensDidWakeNotification,
+            NSWorkspace.sessionDidBecomeActiveNotification,
+        ] {
+            NSWorkspace.shared.notificationCenter.addObserver(
+                self,
+                selector: #selector(systemDidWake),
+                name: name,
+                object: nil
+            )
+        }
 
         observer.start { [weak self] in self?.scheduleRefresh() }
 
@@ -109,6 +166,7 @@ final class BarController: NSObject {
     }
 
     private func updateMenuState() {
+        ensureOnActiveSpace()
         let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let hides = UserDefaults.standard.bool(forKey: Pref.hideOnMenuOpen)
         let range = panel.frame.width > 1

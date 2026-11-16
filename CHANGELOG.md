@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The title no longer stays hidden after sleep, wake, or a login screen change. The panel is rebuilt on the active Space when macOS strands it on an old one.
+
 ## [1.1.1] - 2026-11-16
 
 ### Added
