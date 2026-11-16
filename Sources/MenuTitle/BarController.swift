@@ -15,7 +15,7 @@ final class BarController: NSObject {
     private let container = NSView()
     private let view = BarView()
     private var glassHost: NSView?
-    private let queue = DispatchQueue(label: "com.zeb.windowtitles.query")
+    private let queue = DispatchQueue(label: "com.wigglysheets.menutitle.query")
     private let statusItem = StatusItemController()
     private var currentInfo: FrontWindowInfo?
     private var timer: Timer?

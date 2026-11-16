@@ -12,11 +12,11 @@ let macOSDeploymentTarget = "14.0"
 let macOSSDKVersion = ProcessInfo.processInfo.environment["MENUTITLE_SDK_VERSION"] ?? "27.2"
 
 let package = Package(
-    name: "WindowTitles",
+    name: "MenuTitle",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "WindowTitles",
+            name: "MenuTitle",
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-platform_version",
@@ -26,6 +26,6 @@ let package = Package(
                 ])
             ]
         ),
-        .testTarget(name: "WindowTitlesTests", dependencies: ["WindowTitles"]),
+        .testTarget(name: "MenuTitleTests", dependencies: ["MenuTitle"]),
     ]
 )

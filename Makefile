@@ -3,7 +3,7 @@
 # `make` prints the list of targets. Every target is phony.
 
 APP_NAME := MenuTitle
-PRODUCT_NAME := WindowTitles
+PRODUCT_NAME := MenuTitle
 export MENUTITLE_SDK_VERSION := $(shell xcrun --sdk macosx --show-sdk-version)
 CONFIGURATION ?= debug
 # The version of a release comes from the command line: `make release VERSION=1.2.3`.

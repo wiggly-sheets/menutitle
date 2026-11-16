@@ -1,5 +1,5 @@
 import XCTest
-@testable import WindowTitles
+@testable import MenuTitle
 
 final class TitleCleanerTests: XCTestCase {
     func testStripsBrowserAndProfileNames() {
