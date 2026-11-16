@@ -28,6 +28,7 @@ final class BarController: NSObject {
     private var pending = false
     private var lastFrontPid: pid_t?
     private var settleDeadline = Date.distantPast
+    private var retryCount = 0
 
     override init() {
         panel = BarPanel(
@@ -128,6 +129,7 @@ final class BarController: NSObject {
 
         if frontPid != lastFrontPid {
             lastFrontPid = frontPid
+            retryCount = 0
             // The menu bar still shows the previous app's menus for a moment.
             settleDeadline = Date().addingTimeInterval(0.18)
             hide()
@@ -152,7 +154,15 @@ final class BarController: NSObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.busy = false
-                if NSWorkspace.shared.frontmostApplication?.processIdentifier == frontPid {
+                let sameApp = NSWorkspace.shared.frontmostApplication?.processIdentifier == frontPid
+                let missing = info == nil || menuBar == nil || (info?.title.isEmpty ?? true)
+                if sameApp, missing, self.retryCount < 2 {
+                    self.retryCount += 1
+                    self.scheduleRefresh(after: 0.12)
+                    return
+                }
+                if sameApp {
+                    self.retryCount = 0
                     self.apply(info: info, menuBar: menuBar)
                 }
                 if self.pending {
@@ -177,7 +187,7 @@ final class BarController: NSObject {
 
         var keyParts: [String] = [
             info.app, info.title, String(info.pid), String(info.fullscreen),
-            "\(menuBar.endX)", String(describing: screen.frame),
+            "\(menuBar.endX)", "\(menuBar.anchor.x)", "\(menuBar.anchor.y)", String(describing: screen.frame),
             String(menuOpen),
             defaults.string(forKey: Pref.fontFamily) ?? "",
             String(defaults.integer(forKey: Pref.fontTraits)),
@@ -286,9 +296,8 @@ final class BarController: NSObject {
             }
             cap = min(cap, screen.frame.maxX - x - 2)
         }
-        guard cap >= 40 else {
+        guard cap >= 24 else {
             hide()
-            statusItem.update(nil)
             return
         }
 

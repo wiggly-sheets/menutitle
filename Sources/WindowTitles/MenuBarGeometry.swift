@@ -83,14 +83,16 @@ enum MenuBarGeometry {
               ) as? [[String: Any]] else { return false }
 
         let menuLevel = Int(CGWindowLevelForKey(.popUpMenuWindow))
+        let screenWidth = NSScreen.screens.first?.frame.width ?? 2000
         for window in windows {
-            guard let layer = window[kCGWindowLayer as String] as? Int, layer >= menuLevel,
+            guard let layer = window[kCGWindowLayer as String] as? Int,
+                  layer >= menuLevel, layer <= menuLevel + 2,
                   let owner = window[kCGWindowOwnerPID as String] as? Int, owner == Int(pid),
                   let bounds = window[kCGWindowBounds as String] as? NSDictionary,
                   let y = (bounds["Y"] as? NSNumber)?.doubleValue, y < 20,
                   let width = (bounds["Width"] as? NSNumber)?.doubleValue,
                   let height = (bounds["Height"] as? NSNumber)?.doubleValue,
-                  width > 40, height > 20 else { continue }
+                  width > 40, width < screenWidth * 0.6, height > 40 else { continue }
             return true
         }
         return false

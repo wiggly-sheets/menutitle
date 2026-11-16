@@ -33,7 +33,7 @@ final class FrontWindowObserver {
         appElement = app
         AXObserverAddNotification(observer, app, kAXFocusedWindowChangedNotification as CFString, Unmanaged.passUnretained(self).toOpaque())
         AXObserverAddNotification(observer, app, kAXWindowCreatedNotification as CFString, Unmanaged.passUnretained(self).toOpaque())
-        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes)
 
         attachTitleNotification()
     }
@@ -47,7 +47,7 @@ final class FrontWindowObserver {
             if let titleElement {
                 AXObserverRemoveNotification(observer, titleElement, kAXTitleChangedNotification as CFString)
             }
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes)
         }
         observer = nil
         appElement = nil
