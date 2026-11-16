@@ -14,6 +14,33 @@ enum Yabai {
         "/run/current-system/sw/bin/yabai",
     ].first(where: { FileManager.default.isExecutableFile(atPath: $0) })
 
+    /// Runs a query through yabai. A missing binary, nonzero exit, timeout, or
+    /// empty response counts as unavailable.
+    static func isAvailable() -> Bool {
+        guard let path else { return false }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: path)
+        process.arguments = ["-m", "query", "--windows"]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return false
+        }
+        let killer = DispatchWorkItem {
+            if process.isRunning { process.terminate() }
+        }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: killer)
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        killer.cancel()
+        guard process.terminationStatus == 0,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return false }
+        return !object.isEmpty
+    }
+
     static func queryFrontWindow() -> FrontWindowInfo? {
         guard let path else { return nil }
 

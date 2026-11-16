@@ -496,25 +496,7 @@ struct SettingsView: View {
     }
 
     private func grantAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-
-        // Privacy & Security pane. The Accessibility anchor works on macOS 26
-        // and on macOS 27, where the pane includes Device Control and Data Access.
-        let targets = [
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
-        ]
-        for target in targets {
-            if let url = URL(string: target), NSWorkspace.shared.open(url) { break }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSRunningApplication
-                .runningApplications(withBundleIdentifier: "com.apple.systempreferences")
-                .first?
-                .activate(options: [.activateAllWindows])
-        }
+        Permissions.requestAndOpen()
     }
 
     private func sliderRow(

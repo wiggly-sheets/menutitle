@@ -149,7 +149,7 @@ Only run that command for apps you downloaded from a source you trust.
 
 #### Step 5: Grant Accessibility access
 
-MenuTitle needs Accessibility access to measure the menu bar and read window titles through yabai.
+MenuTitle needs Accessibility access to measure the menu bar and read window titles through yabai. On launch, it explains this with a prompt that opens the right settings pane.
 
 1. Open MenuTitle's settings and click **Grant…** in the **Permissions** pane.
 2. Enable **MenuTitle** under **System Settings → Privacy & Security → Accessibility**.
@@ -265,7 +265,8 @@ Found a security issue? Open an issue or contact the maintainer privately.
 ## Notes and limits
 
 - Only yabai's focused window is shown. A space with no focused window has no title.
-- The custom position is a single saved point, not one per display.
+- The custom position is saved for each display.
+- MenuTitle checks for yabai at launch. Without it, the app explains what to install and then quits.
 - The menu bar item hides when the front app is MenuTitle itself or when Accessibility access is missing.
 - MenuTitle is an accessory app: no Dock icon and no app menu of its own.
 - If sketchybar still shows its `window_title` item in the same area, the two overlap. Remove that item or use the **Left inset** setting.

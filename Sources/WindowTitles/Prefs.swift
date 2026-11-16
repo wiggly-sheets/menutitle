@@ -40,6 +40,8 @@ enum Pref {
     static let positionSet = "positionSet"
     static let positionX = "positionX"
     static let positionY = "positionY"
+    static let positionXByDisplay = "positionXByDisplay"
+    static let positionYByDisplay = "positionYByDisplay"
     static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
     static let statusItemIconStyle = "statusItemIconStyle"
     static let statusItemFontFamily = "statusItemFontFamily"
@@ -90,6 +92,8 @@ enum Pref {
         positionSet: false,
         positionX: 0.0,
         positionY: 0.0,
+        positionXByDisplay: [String: Double](),
+        positionYByDisplay: [String: Double](),
         statusItemMirrorsTitle: true,
         statusItemIconStyle: IconStyle.appFont.rawValue,
         statusItemFontFamily: "Liga SFMono Nerd Font",

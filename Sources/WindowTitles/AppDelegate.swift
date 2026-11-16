@@ -6,13 +6,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         UserDefaults.standard.register(defaults: Pref.defaults)
 
-        if !AXIsProcessTrusted() {
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(options)
-            SettingsWindow.shared.show()
+        DispatchQueue.global(qos: .userInitiated).async {
+            let available = Yabai.isAvailable()
+            DispatchQueue.main.async {
+                guard available else {
+                    self.showYabaiAlert()
+                    return
+                }
+                Permissions.showMissingAlertIfNeeded()
+                self.bar.start()
+            }
         }
+    }
 
-        bar.start()
+    private func showYabaiAlert() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "MenuTitle needs yabai"
+        alert.informativeText = """
+            MenuTitle reads the focused window from yabai. Install yabai with Homebrew, \
+            then open MenuTitle again.
+            """
+        alert.addButton(withTitle: "Install yabai")
+        alert.addButton(withTitle: "Quit")
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "https://github.com/koekeishiya/yabai") {
+            NSWorkspace.shared.open(url)
+        }
+        NSApp.terminate(nil)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

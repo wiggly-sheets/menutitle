@@ -100,7 +100,10 @@ final class BarController: NSObject {
     private func updateMenuState() {
         let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let hides = UserDefaults.standard.bool(forKey: Pref.hideOnMenuOpen)
-        let open = hides && MenuBarGeometry.hasOpenMenu(pid: frontPid)
+        let range = panel.frame.width > 1
+            ? panel.frame.minX...panel.frame.maxX
+            : nil
+        let open = hides && MenuBarGeometry.hasOpenMenu(pid: frontPid, overlappingX: range)
         guard open != menuOpen else { return }
         menuOpen = open
         if open {
@@ -223,9 +226,8 @@ final class BarController: NSObject {
             "\(defaults.bool(forKey: Pref.showStatusItem))",
             "\(defaults.bool(forKey: Pref.customPosition))",
             "\(defaults.bool(forKey: Pref.lockPosition))",
-            "\(defaults.bool(forKey: Pref.positionSet))",
-            String(defaults.double(forKey: Pref.positionX)),
-            String(defaults.double(forKey: Pref.positionY)),
+            displayKey(screen),
+            savedPosition(for: screen).map { "\($0.x),\($0.y)" } ?? "",
             "\(defaults.bool(forKey: Pref.statusItemMirrorsTitle))",
             defaults.string(forKey: Pref.statusItemIconStyle) ?? "",
             defaults.string(forKey: Pref.statusItemFontFamily) ?? "",
@@ -242,7 +244,6 @@ final class BarController: NSObject {
         let showStatusItem = defaults.bool(forKey: Pref.showStatusItem)
         let customPosition = defaults.bool(forKey: Pref.customPosition)
         let lockPosition = defaults.bool(forKey: Pref.lockPosition)
-        let positionSet = defaults.bool(forKey: Pref.positionSet)
 
         let barHeight = MenuBarGeometry.height(for: screen)
         let fontSize = CGFloat(defaults.double(forKey: Pref.fontSize))
@@ -387,16 +388,11 @@ final class BarController: NSObject {
         let frame: NSRect
         if customPosition {
             var origin: NSPoint
-            if positionSet {
-                origin = NSPoint(
-                    x: defaults.double(forKey: Pref.positionX),
-                    y: defaults.double(forKey: Pref.positionY)
-                )
+            if let saved = savedPosition(for: screen) {
+                origin = saved
             } else {
                 origin = NSPoint(x: x, y: screen.frame.maxY - barHeight)
-                defaults.set(origin.x, forKey: Pref.positionX)
-                defaults.set(origin.y, forKey: Pref.positionY)
-                defaults.set(true, forKey: Pref.positionSet)
+                savePosition(origin, screen: screen)
             }
             let target = NSScreen.screens.first { $0.frame.contains(origin) } ?? screen
             origin.x = min(max(origin.x, target.frame.minX), target.frame.maxX - width)
@@ -575,11 +571,49 @@ final class BarController: NSObject {
         )
     }
 
-    private func savePosition(_ origin: NSPoint) {
+    private func savePosition(_ origin: NSPoint, screen: NSScreen? = nil) {
+        let target = screen
+            ?? NSScreen.screens.first { $0.frame.contains(origin) }
+            ?? panel.screen
+        guard let target else { return }
         let defaults = UserDefaults.standard
-        defaults.set(origin.x, forKey: Pref.positionX)
-        defaults.set(origin.y, forKey: Pref.positionY)
-        defaults.set(true, forKey: Pref.positionSet)
+        let key = displayKey(target)
+        var xs = positionMap(Pref.positionXByDisplay)
+        var ys = positionMap(Pref.positionYByDisplay)
+        xs[key] = origin.x
+        ys[key] = origin.y
+        defaults.set(xs, forKey: Pref.positionXByDisplay)
+        defaults.set(ys, forKey: Pref.positionYByDisplay)
+    }
+
+    private func displayKey(_ screen: NSScreen) -> String {
+        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        return number?.stringValue ?? "\(screen.frame.origin.x),\(screen.frame.origin.y)"
+    }
+
+    private func positionMap(_ key: String) -> [String: Double] {
+        let stored = UserDefaults.standard.dictionary(forKey: key) ?? [:]
+        return stored.compactMapValues { ($0 as? NSNumber)?.doubleValue }
+    }
+
+    private func savedPosition(for screen: NSScreen) -> NSPoint? {
+        let key = displayKey(screen)
+        let xs = positionMap(Pref.positionXByDisplay)
+        let ys = positionMap(Pref.positionYByDisplay)
+        if let x = xs[key], let y = ys[key] {
+            return NSPoint(x: x, y: y)
+        }
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: Pref.positionSet) {
+            let legacy = NSPoint(
+                x: defaults.double(forKey: Pref.positionX),
+                y: defaults.double(forKey: Pref.positionY)
+            )
+            if screen.frame.contains(legacy) {
+                return legacy
+            }
+        }
+        return nil
     }
 
     private func showMenu(at point: NSPoint, in target: NSView) {

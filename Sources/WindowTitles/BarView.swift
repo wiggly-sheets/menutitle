@@ -40,6 +40,12 @@ final class BarView: NSView {
     private(set) var isDragging = false
     private var mouseStart: NSPoint?
     private var originStart: NSPoint?
+    private var isPressed = false {
+        didSet {
+            if oldValue != isPressed { needsDisplay = true }
+        }
+    }
+    private var pressReset: DispatchWorkItem?
 
     private var scrollTimer: Timer?
     private var scrollOffset: CGFloat = 0
@@ -113,6 +119,7 @@ final class BarView: NSView {
         guard let content else { return }
 
         drawBackground(content)
+        if isPressed { drawHighlight(content) }
 
         let offsetY = contentVerticalOffset(for: content)
         var x = content.paddingLeft
@@ -206,10 +213,22 @@ final class BarView: NSView {
         return min(limit, max(-limit, (padding.bottom - padding.top) / 2))
     }
 
+    private func backgroundRect(for content: BarContent) -> NSRect {
+        let insetY = backgroundInsetY(for: content, height: bounds.height)
+        return bounds.insetBy(dx: 0.5, dy: insetY + 0.5)
+    }
+
+    private func drawHighlight(_ content: BarContent) {
+        let rect = backgroundRect(for: content)
+        guard rect.width > 0, rect.height > 0 else { return }
+        let radius = min(content.cornerRadius, rect.height / 2)
+        NSColor.labelColor.withAlphaComponent(0.16).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+    }
+
     private func drawBackground(_ content: BarContent) {
         guard content.background == .solid || content.background == .outline else { return }
-        let insetY = backgroundInsetY(for: content, height: bounds.height)
-        let rect = bounds.insetBy(dx: 0.5, dy: insetY + 0.5)
+        let rect = backgroundRect(for: content)
         guard rect.width > 0, rect.height > 0 else { return }
         let radius = min(content.cornerRadius, rect.height / 2)
         let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
@@ -292,6 +311,7 @@ final class BarView: NSView {
         mouseStart = NSEvent.mouseLocation
         originStart = window?.frame.origin
         isDragging = false
+        isPressed = true
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -301,11 +321,13 @@ final class BarView: NSView {
         let dy = now.y - mouseStart.y
         if abs(dx) > 3 || abs(dy) > 3 { isDragging = true }
         guard isDragging else { return }
+        isPressed = false
         window.setFrameOrigin(NSPoint(x: originStart.x + dx, y: originStart.y + dy))
     }
 
     override func mouseUp(with event: NSEvent) {
         defer {
+            isPressed = false
             isDragging = false
             mouseStart = nil
             originStart = nil
@@ -319,6 +341,7 @@ final class BarView: NSView {
 
     override func otherMouseDown(with event: NSEvent) {
         if event.buttonNumber == 2 {
+            flashPress()
             onMiddleClick?()
         } else {
             super.otherMouseDown(with: event)
@@ -326,6 +349,16 @@ final class BarView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        isPressed = true
         onRightClick?(convert(event.locationInWindow, from: nil))
+        isPressed = false
+    }
+
+    private func flashPress() {
+        isPressed = true
+        pressReset?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.isPressed = false }
+        pressReset = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: work)
     }
 }

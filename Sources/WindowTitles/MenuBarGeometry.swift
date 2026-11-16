@@ -75,7 +75,8 @@ enum MenuBarGeometry {
 
     /// True when the given app has a menu bar menu open. Menus that drop from
     /// the menu bar start at the top of the screen; other popups are ignored.
-    static func hasOpenMenu(pid: pid_t?) -> Bool {
+    /// When `overlappingX` is given, the menu must also cover that range.
+    static func hasOpenMenu(pid: pid_t?, overlappingX: ClosedRange<CGFloat>? = nil) -> Bool {
         guard let pid,
               let windows = CGWindowListCopyWindowInfo(
                 [.optionOnScreenOnly, .excludeDesktopElements],
@@ -89,10 +90,15 @@ enum MenuBarGeometry {
                   layer >= menuLevel, layer <= menuLevel + 2,
                   let owner = window[kCGWindowOwnerPID as String] as? Int, owner == Int(pid),
                   let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+                  let x = (bounds["X"] as? NSNumber)?.doubleValue,
                   let y = (bounds["Y"] as? NSNumber)?.doubleValue, y < 20,
                   let width = (bounds["Width"] as? NSNumber)?.doubleValue,
                   let height = (bounds["Height"] as? NSNumber)?.doubleValue,
                   width > 40, width < screenWidth * 0.6, height > 40 else { continue }
+            if let overlappingX,
+               x + width <= overlappingX.lowerBound || x >= overlappingX.upperBound {
+                continue
+            }
             return true
         }
         return false

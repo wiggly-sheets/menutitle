@@ -46,19 +46,21 @@ final class AppIconFont {
     }
 
     private static func readMapping(_ data: Data) -> Mapping? {
-        func u16(_ offset: Int) -> Int {
-            Int(data[offset]) << 8 | Int(data[offset + 1])
+        func u16(_ offset: Int) -> Int? {
+            guard offset >= 0, offset + 2 <= data.count else { return nil }
+            return Int(data[offset]) << 8 | Int(data[offset + 1])
         }
-        func u32(_ offset: Int) -> Int {
-            Int(data[offset]) << 24 | Int(data[offset + 1]) << 16
+        func u32(_ offset: Int) -> Int? {
+            guard offset >= 0, offset + 4 <= data.count else { return nil }
+            return Int(data[offset]) << 24 | Int(data[offset + 1]) << 16
                 | Int(data[offset + 2]) << 8 | Int(data[offset + 3])
         }
         func tag(_ offset: Int) -> String? {
-            String(data: data[offset..<offset + 4], encoding: .ascii)
+            guard offset >= 0, offset + 4 <= data.count else { return nil }
+            return String(data: data[offset..<offset + 4], encoding: .ascii)
         }
 
-        guard data.count > 12 else { return nil }
-        let tableCount = u16(4)
+        guard data.count > 12, let tableCount = u16(4), tableCount < 4096 else { return nil }
         var metaOffset = 0
         var metaLength = 0
         var foundMeta = false
@@ -66,26 +68,26 @@ final class AppIconFont {
         for index in 0..<tableCount {
             let record = 12 + index * 16
             guard record + 16 <= data.count else { break }
-            if tag(record) == "meta" {
-                metaOffset = u32(record + 8)
-                metaLength = u32(record + 12)
+            if tag(record) == "meta",
+               let offset = u32(record + 8),
+               let length = u32(record + 12) {
+                metaOffset = offset
+                metaLength = length
                 foundMeta = true
                 break
             }
         }
-        guard foundMeta, metaLength > 16, metaOffset + metaLength <= data.count else { return nil }
-
-        let mapCount = u32(metaOffset + 12)
-        guard mapCount < 64 else { return nil }
+        guard foundMeta, metaLength > 16, metaOffset + metaLength <= data.count,
+              let mapCount = u32(metaOffset + 12), mapCount > 0, mapCount < 64 else { return nil }
 
         for index in 0..<mapCount {
             let record = metaOffset + 16 + index * 12
             guard record + 12 <= data.count else { break }
-            guard tag(record) == "APPM" else { continue }
-
-            let offset = metaOffset + u32(record + 4)
-            let length = u32(record + 8)
-            guard offset + length <= data.count else { return nil }
+            guard tag(record) == "APPM",
+                  let offsetValue = u32(record + 4),
+                  let length = u32(record + 8) else { continue }
+            let offset = metaOffset + offsetValue
+            guard offset >= metaOffset, offset + length <= data.count else { return nil }
             return parse(data.subdata(in: offset..<offset + length))
         }
         return nil
