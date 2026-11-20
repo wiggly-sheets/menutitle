@@ -24,11 +24,11 @@ enum MenuBarGeometry {
     }
 
     /// Right edge of the front app's menu bar items and a point on that menu bar.
-    static func menuBar(pid: pid_t?) -> MenuBar? {
+    static func menuBar(pid: pid_t?, timeout: Float = 0.25) -> MenuBar? {
         guard let pid else { return nil }
 
         let application = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(application, 0.25)
+        AXUIElementSetMessagingTimeout(application, timeout)
 
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(application, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
@@ -63,6 +63,19 @@ enum MenuBarGeometry {
 
         guard endX > 1, let anchor else { return nil }
         return MenuBar(endX: endX, anchor: anchor)
+    }
+
+    /// Number of windows an app reports. Nil when AX cannot answer, so callers
+    /// can tell "no windows" from "unknown".
+    static func windowCount(pid: pid_t?) -> Int? {
+        guard let pid else { return nil }
+
+        let application = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(application, 0.25)
+        var windowsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let windows = windowsRef as? [AXUIElement] else { return nil }
+        return windows.count
     }
 
     /// Screen containing an AX-space point. AX y grows downward from the top.

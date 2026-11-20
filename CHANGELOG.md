@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The title and app icon now change together during a space change. The title no longer waits for the menus to settle, and it keeps moving clear as they change.
+- A long title no longer covers the next app's menus during a space change. The panel moves clear as soon as the space changes, then tracks the menus frame by frame without re-running the title query until their width holds steady.
+- App icons load off the main thread and are cached per app, so a space change never waits for icon data. If no room is left beside the menus, the title hides instead of covering them.
+- The title clears as soon as the front app's last window closes, instead of keeping the last window's title. A window that yabai still reports is ignored if it belongs to another app.
+
 ## [1.1.3] - 2026-11-20
 
 ### Fixed

@@ -46,6 +46,7 @@ final class FrontWindowObserver {
             }
             if let titleElement {
                 AXObserverRemoveNotification(observer, titleElement, kAXTitleChangedNotification as CFString)
+                AXObserverRemoveNotification(observer, titleElement, kAXUIElementDestroyedNotification as CFString)
             }
             CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes)
         }
@@ -56,6 +57,11 @@ final class FrontWindowObserver {
     }
 
     private func handle(_ notification: String, element: AXUIElement) {
+        if notification == kAXUIElementDestroyedNotification as String {
+            titleElement = nil
+            onEvent?()
+            return
+        }
         if notification == kAXFocusedWindowChangedNotification as String {
             attachTitleNotification()
         }
@@ -77,5 +83,7 @@ final class FrontWindowObserver {
         AXUIElementSetMessagingTimeout(window, 0.25)
         titleElement = window
         AXObserverAddNotification(observer, window, kAXTitleChangedNotification as CFString, Unmanaged.passUnretained(self).toOpaque())
+        // Closing the last window sends no focus or app-activation change.
+        AXObserverAddNotification(observer, window, kAXUIElementDestroyedNotification as CFString, Unmanaged.passUnretained(self).toOpaque())
     }
 }

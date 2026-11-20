@@ -27,7 +27,13 @@ final class BarController: NSObject {
     private var busy = false
     private var pending = false
     private var lastFrontPid: pid_t?
-    private var settleDeadline = Date.distantPast
+    private var clampTimer: Timer?
+    private var clampUntil = Date.distantPast
+    private var clampStableTicks = 0
+    private var lastClampEndX: CGFloat?
+    private let iconQueue = DispatchQueue(label: "com.wigglysheets.menutitle.icon")
+    private var icons: [pid_t: NSImage] = [:]
+    private var iconLoads: Set<pid_t> = []
     private var retryCount = 0
     private var lastPanelRebuild = Date.distantPast
     private var skipNextFade = false
@@ -98,6 +104,9 @@ final class BarController: NSObject {
     @objc private func activeSpaceDidChange() {
         lastRenderKey = nil
         skipNextFade = true
+        // Move clear before the slower title query finishes.
+        clampToMenus()
+        startClampTracking()
         scheduleRefresh(after: 0)
         // A panel can lose its Space binding after sleep.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
@@ -124,7 +133,6 @@ final class BarController: NSObject {
         lastFrontPid = nil
         lastRenderKey = nil
         retryCount = 0
-        settleDeadline = .distantPast
         // A window made during wake can stay tied to the Space that was active
         // before sleep. Replace it once the WindowServer has settled.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
@@ -194,23 +202,105 @@ final class BarController: NSObject {
         refresh()
     }
 
-    // Keeps the outgoing title to the right of menus that are still changing.
-    private func moveClear(of menuBar: MenuBarGeometry.MenuBar) {
+    // App icons can load lazily from disk. Load them off the main thread so a
+    // space change never waits for one.
+    private func cachedIcon(for pid: pid_t) -> NSImage? {
+        if let icon = icons[pid] { return icon }
+        loadIcon(pid)
+        return nil
+    }
+
+    private func loadIcon(_ pid: pid_t) {
+        guard icons[pid] == nil, !iconLoads.contains(pid) else { return }
+        iconLoads.insert(pid)
+        iconQueue.async { [weak self] in
+            let icon = NSRunningApplication(processIdentifier: pid)?.icon
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.iconLoads.remove(pid)
+                guard let icon else { return }
+                if self.icons.count > 32 { self.icons.removeAll() }
+                self.icons[pid] = icon
+                self.lastRenderKey = nil
+                self.scheduleRefresh(after: 0)
+            }
+        }
+    }
+
+    // Moves the panel clear of the current app's menus without rebuilding its
+    // content, so a long title cannot cover them while the title query runs.
+    // Returns the menu end for tracking, or nil when there is nothing to measure.
+    @discardableResult
+    private func clampToMenus() -> CGFloat? {
         let defaults = UserDefaults.standard
         guard panel.isVisible,
+              !view.isDragging,
               !defaults.bool(forKey: Pref.customPosition),
-              let screen = MenuBarGeometry.screen(forAXPoint: menuBar.anchor) else { return }
+              let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              let menuBar = MenuBarGeometry.menuBar(pid: pid, timeout: 0.05),
+              let screen = MenuBarGeometry.screen(forAXPoint: menuBar.anchor) else { return nil }
         let x = max(
             menuBar.endX + CGFloat(defaults.double(forKey: Pref.gap))
                 + CGFloat(defaults.double(forKey: Pref.leftInset)),
             screen.frame.minX + 2
         )
         var frame = panel.frame
-        guard frame.minX < x else { return }
+        guard frame.minX < x else { return menuBar.endX }
         frame.origin.x = x
         frame.size.width = min(frame.width, screen.frame.maxX - x - 2)
-        guard frame.width >= 24 else { return }
+        guard frame.width >= 24 else {
+            skipNextFade = true
+            hide()
+            return menuBar.endX
+        }
         panel.setFrame(frame, display: true)
+        return menuBar.endX
+    }
+
+    // The destination Space's menus can keep changing after the app activates.
+    // Track them for a while, but stop as soon as their width holds steady.
+    private func startClampTracking() {
+        guard !UserDefaults.standard.bool(forKey: Pref.customPosition) else { return }
+        clampUntil = Date().addingTimeInterval(2.5)
+        clampStableTicks = 0
+        lastClampEndX = nil
+        guard clampTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] timer in
+            guard let self else {
+                timer.invalidate()
+                return
+            }
+            guard self.panel.isVisible else {
+                self.stopClampTracking()
+                return
+            }
+            if Date() >= self.clampUntil {
+                self.stopClampTracking()
+                return
+            }
+            guard let endX = self.clampToMenus() else {
+                self.clampStableTicks = 0
+                return
+            }
+            if endX == self.lastClampEndX {
+                self.clampStableTicks += 1
+            } else {
+                self.clampStableTicks = 0
+                self.lastClampEndX = endX
+            }
+            if self.clampStableTicks >= 15 {
+                self.stopClampTracking()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        clampTimer = timer
+    }
+
+    private func stopClampTracking() {
+        clampTimer?.invalidate()
+        clampTimer = nil
+        clampStableTicks = 0
+        lastClampEndX = nil
     }
 
     private func scheduleRefresh(after delay: TimeInterval = 0.05) {
@@ -257,23 +347,11 @@ final class BarController: NSObject {
         if frontPid != lastFrontPid {
             lastFrontPid = frontPid
             retryCount = 0
-            // The menu bar still shows the previous app's menus for a moment.
-            // Keep the old title up until the new one is ready, like the menus.
-            settleDeadline = Date().addingTimeInterval(0.1)
-        }
-
-        let remaining = settleDeadline.timeIntervalSinceNow
-        if remaining > 0 {
-            // Track menus while they change so the old title never covers them.
-            queue.async { [weak self] in
-                let menuBar = MenuBarGeometry.menuBar(pid: frontPid)
-                DispatchQueue.main.async {
-                    guard let self, let menuBar else { return }
-                    self.moveClear(of: menuBar)
-                }
-            }
-            scheduleRefresh(after: min(remaining, 0.05))
-            return
+            // The menus change before the title query returns. Move clear now
+            // and keep measuring the menus while they change.
+            loadIcon(frontPid)
+            clampToMenus()
+            startClampTracking()
         }
 
         if busy {
@@ -286,11 +364,17 @@ final class BarController: NSObject {
         queue.async { [weak self] in
             let info = Yabai.queryFrontWindow()
             let menuBar = MenuBarGeometry.menuBar(pid: frontPid)
+            let windowCount = MenuBarGeometry.windowCount(pid: frontPid)
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.busy = false
                 let sameApp = NSWorkspace.shared.frontmostApplication?.processIdentifier == frontPid
-                let missing = info == nil || menuBar == nil || (info?.title.isEmpty ?? true)
+                // yabai can keep reporting a window that is gone or belongs to
+                // another app. A front app with no windows has no title to show.
+                let noWindows = windowCount == 0
+                let usable = info.flatMap { $0.pid == frontPid ? $0 : nil }
+                let missing = usable == nil || menuBar == nil
+                    || (usable?.title.isEmpty ?? true) || noWindows
                 if sameApp, missing, self.retryCount < 2 {
                     self.retryCount += 1
                     self.scheduleRefresh(after: 0.12)
@@ -298,7 +382,7 @@ final class BarController: NSObject {
                 }
                 if sameApp {
                     self.retryCount = 0
-                    self.apply(info: info, menuBar: menuBar)
+                    self.apply(info: noWindows ? nil : usable, menuBar: menuBar)
                 }
                 if self.pending {
                     self.pending = false
@@ -462,7 +546,7 @@ final class BarController: NSObject {
                     )
                 }
             case .native:
-                icon = NSRunningApplication(processIdentifier: info.pid)?.icon
+                icon = cachedIcon(for: info.pid)
             }
             return BarContent(
                 title: title,
