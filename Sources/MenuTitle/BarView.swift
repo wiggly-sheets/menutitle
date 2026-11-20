@@ -94,21 +94,19 @@ final class BarView: NSView {
     private func updateScrolling() {
         guard let content else { return }
         let overflows = naturalWidth(forHeight: bounds.height) > bounds.width + 1
-        let shouldScroll = content.scrolling && overflows && window?.isVisible == true
 
-        guard shouldScroll else {
-            scrollTimer?.invalidate()
-            scrollTimer = nil
-            if scrollOffset != 0 {
-                scrollOffset = 0
-                needsDisplay = true
-            }
+        guard content.scrolling, overflows, window?.isVisible == true else {
+            pauseScrolling()
             return
         }
         guard scrollTimer == nil else { return }
 
-        let timer = Timer(timeInterval: 1.0 / 24.0, repeats: true) { [weak self] _ in
-            guard let self, let content = self.content, self.window?.isVisible == true else { return }
+        let timer = Timer(timeInterval: 1.0 / 24.0, repeats: true) { [weak self] timer in
+            guard let self, let content = self.content, self.window?.isVisible == true else {
+                timer.invalidate()
+                self?.scrollTimer = nil
+                return
+            }
             self.scrollOffset += content.scrollSpeed / 24.0
             self.needsDisplay = true
         }
@@ -118,6 +116,15 @@ final class BarView: NSView {
 
     func resumeScrolling() {
         updateScrolling()
+    }
+
+    func pauseScrolling() {
+        scrollTimer?.invalidate()
+        scrollTimer = nil
+        if scrollOffset != 0 {
+            scrollOffset = 0
+            needsDisplay = true
+        }
     }
 
     func cancelInteraction() {

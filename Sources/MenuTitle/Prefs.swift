@@ -42,9 +42,6 @@ enum Pref {
     static let showStatusItem = "showStatusItem"
     static let customPosition = "customPosition"
     static let lockPosition = "lockPosition"
-    static let positionSet = "positionSet"
-    static let positionX = "positionX"
-    static let positionY = "positionY"
     static let positionXByDisplay = "positionXByDisplay"
     static let positionYByDisplay = "positionYByDisplay"
     static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
@@ -99,9 +96,6 @@ enum Pref {
         showStatusItem: false,
         customPosition: false,
         lockPosition: false,
-        positionSet: false,
-        positionX: 0.0,
-        positionY: 0.0,
         positionXByDisplay: [String: Double](),
         positionYByDisplay: [String: Double](),
         statusItemMirrorsTitle: true,

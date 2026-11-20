@@ -91,15 +91,23 @@ enum MenuBarGeometry {
         return screens.first { $0.frame.contains(appKitPoint) } ?? NSScreen.main ?? primary
     }
 
+    /// One on-screen window list snapshot for callers that run several queries.
+    static func windowSnapshot() -> [[String: Any]] {
+        (CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]]) ?? []
+    }
+
     /// True when the given app has a menu bar menu open. Menus that drop from
     /// the menu bar start at the top of the screen; other popups are ignored.
     /// When `overlappingX` is given, the menu must also cover that range.
-    static func hasOpenMenu(pid: pid_t?, overlappingX: ClosedRange<CGFloat>? = nil) -> Bool {
-        guard let pid,
-              let windows = CGWindowListCopyWindowInfo(
-                [.optionOnScreenOnly, .excludeDesktopElements],
-                kCGNullWindowID
-              ) as? [[String: Any]] else { return false }
+    static func hasOpenMenu(
+        pid: pid_t?,
+        overlappingX: ClosedRange<CGFloat>? = nil,
+        windows: [[String: Any]]
+    ) -> Bool {
+        guard let pid else { return false }
 
         let menuLevel = Int(CGWindowLevelForKey(.popUpMenuWindow))
         for window in windows {
@@ -128,12 +136,7 @@ enum MenuBarGeometry {
 
     /// True while Mission Control or Exposé is on screen. WindowManager draws a
     /// full-screen layer 19 shield in those modes and nothing on screen otherwise.
-    static func isMissionControlActive() -> Bool {
-        guard let windows = CGWindowListCopyWindowInfo(
-            [.optionOnScreenOnly, .excludeDesktopElements],
-            kCGNullWindowID
-        ) as? [[String: Any]] else { return false }
-
+    static func isMissionControlActive(windows: [[String: Any]]) -> Bool {
         for window in windows {
             guard let layer = window[kCGWindowLayer as String] as? Int, layer == 19,
                   let owner = window[kCGWindowOwnerPID as String] as? Int,

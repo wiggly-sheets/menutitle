@@ -90,6 +90,7 @@ final class BarController: NSObject {
             defer: false
         )
         configurePanel(replacement)
+        view.cancelInteraction()
         replacement.contentView = container
         panel = replacement
         old.contentView = nil
@@ -213,6 +214,18 @@ final class BarController: NSObject {
         return nil
     }
 
+    // Eager loading only pays off when a native icon can be on screen.
+    private func nativeIconInUse() -> Bool {
+        let defaults = UserDefaults.standard
+        let panelStyle = IconStyle(rawValue: defaults.string(forKey: Pref.iconStyle) ?? "") ?? .appFont
+        if defaults.bool(forKey: Pref.showPanel), panelStyle == .native { return true }
+        guard defaults.bool(forKey: Pref.showStatusItem) else { return false }
+        let statusStyle = defaults.bool(forKey: Pref.statusItemMirrorsTitle)
+            ? panelStyle
+            : IconStyle(rawValue: defaults.string(forKey: Pref.statusItemIconStyle) ?? "") ?? .appFont
+        return statusStyle == .native
+    }
+
     private func loadIcon(_ pid: pid_t) {
         guard icons[pid] == nil, !iconLoads.contains(pid) else { return }
         iconLoads.insert(pid)
@@ -224,6 +237,8 @@ final class BarController: NSObject {
                 guard let icon else { return }
                 if self.icons.count > 32 { self.icons.removeAll() }
                 self.icons[pid] = icon
+                // Only a current native icon needs a new render.
+                guard pid == self.lastFrontPid, self.nativeIconInUse() else { return }
                 self.lastRenderKey = nil
                 self.scheduleRefresh(after: 0)
             }
@@ -336,13 +351,21 @@ final class BarController: NSObject {
     }
 
     private func updateMenuState() {
+        // A hidden panel only needs ticks to notice a menu or Mission Control
+        // closing again.
+        guard panel.isVisible || menuOpen else { return }
         let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let hides = UserDefaults.standard.bool(forKey: Pref.hideOnMenuOpen)
         let range = panel.frame.width > 1
             ? panel.frame.minX...panel.frame.maxX
             : nil
-        let open = hides && MenuBarGeometry.hasOpenMenu(pid: frontPid, overlappingX: range)
-        let hidden = open || MenuBarGeometry.isMissionControlActive()
+        let windows = MenuBarGeometry.windowSnapshot()
+        let open = hides && MenuBarGeometry.hasOpenMenu(
+            pid: frontPid,
+            overlappingX: range,
+            windows: windows
+        )
+        let hidden = open || MenuBarGeometry.isMissionControlActive(windows: windows)
         guard hidden != menuOpen else { return }
         menuOpen = hidden
         if hidden {
@@ -374,7 +397,7 @@ final class BarController: NSObject {
             retryCount = 0
             // The menus change before the title query returns. Move clear now
             // and keep measuring the menus while they change.
-            loadIcon(frontPid)
+            if nativeIconInUse() { loadIcon(frontPid) }
             clampToMenus()
             startClampTracking()
         }
@@ -519,11 +542,13 @@ final class BarController: NSObject {
         let scrolling = defaults.bool(forKey: Pref.scrollTitles)
         let scrollSpeed = CGFloat(defaults.double(forKey: Pref.scrollSpeed))
 
-        let browserContext = BrowserDetector.context(
-            appName: info.app,
-            pid: info.pid,
-            customSuffixesText: defaults.string(forKey: Pref.customBrowserSuffixes) ?? ""
-        )
+        let browserContext = defaults.bool(forKey: Pref.stripBrowserNames)
+            ? BrowserDetector.context(
+                appName: info.app,
+                pid: info.pid,
+                customSuffixesText: defaults.string(forKey: Pref.customBrowserSuffixes) ?? ""
+            )
+            : nil
         let cleanedTitle = TitleCleaner.clean(
             info.title,
             stripBrowserNames: defaults.bool(forKey: Pref.stripBrowserNames),
@@ -751,6 +776,7 @@ final class BarController: NSObject {
     private func hide() {
         lastRenderKey = nil
         panel.alphaValue = 0
+        view.pauseScrolling()
         if panel.isVisible {
             panel.orderOut(nil)
         }
@@ -860,16 +886,6 @@ final class BarController: NSObject {
         let ys = positionMap(Pref.positionYByDisplay)
         if let x = xs[key], let y = ys[key] {
             return NSPoint(x: x, y: y)
-        }
-        let defaults = UserDefaults.standard
-        if defaults.bool(forKey: Pref.positionSet) {
-            let legacy = NSPoint(
-                x: defaults.double(forKey: Pref.positionX),
-                y: defaults.double(forKey: Pref.positionY)
-            )
-            if screen.frame.contains(legacy) {
-                return legacy
-            }
         }
         return nil
     }

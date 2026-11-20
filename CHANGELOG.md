@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The menu bar query that moves the title clear of menus now runs off the main thread, one query at a time, so an app that stops responding can no longer freeze the title or the settings window.
 - A short title now stays visible beside the menus instead of hiding, and a title hidden for lack of room comes back when room returns. Menu tracking also stays alive while the title is hidden.
 - Menu tracking now measures each display on its own. A menu opened on a stacked or secondary display hides the title, and Mission Control or Exposé on a smaller display is detected too.
+- App icons load only when a native icon is actually shown, so background apps and icon-free styles no longer pay to load them.
+- A hidden long title stops scrolling, menu checks share one window-list snapshot, browser names are inspected only when stripping is on, and a wake rebuild cancels any drag in progress.
 
 ## [1.1.3] - 2026-11-20
 
