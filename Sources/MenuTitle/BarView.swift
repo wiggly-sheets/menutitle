@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 struct BarContent {
     var title: String
@@ -26,13 +27,7 @@ struct BarContent {
 final class BarView: NSView {
     var content: BarContent? {
         didSet {
-            if oldValue?.title != content?.title || oldValue?.scrolling != content?.scrolling {
-                scrollOffset = 0
-            }
-            if oldValue?.scrollSpeed != content?.scrollSpeed {
-                scrollTimer?.invalidate()
-                scrollTimer = nil
-            }
+            stopScrolling()
             needsDisplay = true
             updateScrolling()
         }
@@ -52,12 +47,7 @@ final class BarView: NSView {
     }
     private var pressReset: DispatchWorkItem?
 
-    private var scrollTimer: Timer?
-    private var scrollOffset: CGFloat = 0
-
-    deinit {
-        scrollTimer?.invalidate()
-    }
+    private var scrollClip: NSView?
 
     override var isOpaque: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -83,35 +73,71 @@ final class BarView: NSView {
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
+        stopScrolling()
         updateScrolling()
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        stopScrolling()
         updateScrolling()
     }
 
     private func updateScrolling() {
         guard let content else { return }
-        let overflows = naturalWidth(forHeight: bounds.height) > bounds.width + 1
+        let rect = textRect(for: content)
+        let text = styledTitle(content.title, content: content)
 
-        guard content.scrolling, overflows, window?.isVisible == true else {
+        guard content.scrolling, text.size().width > rect.width + 1,
+              window?.isVisible == true else {
             pauseScrolling()
             return
         }
-        guard scrollTimer == nil else { return }
+        guard scrollClip == nil else { return }
 
-        let timer = Timer(timeInterval: 1.0 / 24.0, repeats: true) { [weak self] timer in
-            guard let self, let content = self.content, self.window?.isVisible == true else {
-                timer.invalidate()
-                self?.scrollTimer = nil
-                return
-            }
-            self.scrollOffset += content.scrollSpeed / 24.0
-            self.needsDisplay = true
+        // Animate the strip's layer: a scrolling frame costs no drawing.
+        let gap: CGFloat = 24
+        let loop = text.size().width + gap
+        let textHeight = text.size().height
+        let image = NSImage(
+            size: NSSize(width: loop * 2, height: textHeight),
+            flipped: true
+        ) { _ in
+            text.draw(at: .zero)
+            text.draw(at: NSPoint(x: loop, y: 0))
+            return true
         }
-        RunLoop.main.add(timer, forMode: .common)
-        scrollTimer = timer
+
+        let clip = NSView(frame: rect)
+        clip.wantsLayer = true
+        clip.layer?.masksToBounds = true
+        addSubview(clip)
+
+        let strip = NSImageView(frame: NSRect(
+            x: 0,
+            y: (rect.height - textHeight) / 2 + contentVerticalOffset(for: content),
+            width: loop * 2,
+            height: textHeight
+        ))
+        strip.wantsLayer = true
+        strip.image = image
+        strip.imageScaling = .scaleNone
+        clip.addSubview(strip)
+
+        let animation = CABasicAnimation(keyPath: "transform.translation.x")
+        animation.fromValue = 0
+        animation.toValue = -loop
+        animation.duration = CFTimeInterval(loop / max(content.scrollSpeed, 1))
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        strip.layer?.add(animation, forKey: "scroll")
+
+        scrollClip = clip
+    }
+
+    private func stopScrolling() {
+        scrollClip?.removeFromSuperview()
+        scrollClip = nil
     }
 
     func resumeScrolling() {
@@ -119,12 +145,9 @@ final class BarView: NSView {
     }
 
     func pauseScrolling() {
-        scrollTimer?.invalidate()
-        scrollTimer = nil
-        if scrollOffset != 0 {
-            scrollOffset = 0
-            needsDisplay = true
-        }
+        guard scrollClip != nil else { return }
+        stopScrolling()
+        needsDisplay = true
     }
 
     func cancelInteraction() {
@@ -160,20 +183,32 @@ final class BarView: NSView {
             x += size.width + content.spacing
         }
 
-        let available = max(0, bounds.width - x - content.paddingRight)
-        let textRect = NSRect(x: x, y: 0, width: available, height: bounds.height)
+        let textRect = self.textRect(for: content)
 
         if content.scrolling {
-            drawScrolling(styledTitle(content.title, content: content), in: textRect, offsetY: offsetY)
+            if scrollClip == nil {
+                drawTitle(styledTitle(content.title, content: content), in: textRect, offsetY: offsetY)
+            }
         } else {
-            let text = truncated(content.title, content: content, width: available)
-            let styled = styledTitle(text, content: content)
-            let size = styled.size()
-            styled.draw(at: NSPoint(
-                x: x,
-                y: (bounds.height - size.height) / 2 + offsetY
-            ))
+            let title = truncated(content.title, content: content, width: textRect.width)
+            drawTitle(styledTitle(title, content: content), in: textRect, offsetY: offsetY)
         }
+    }
+
+    private func textRect(for content: BarContent) -> NSRect {
+        let icon = iconWidth(forHeight: bounds.height)
+        let x = content.paddingLeft + icon + (icon > 0 ? content.spacing : 0)
+        return NSRect(
+            x: x,
+            y: 0,
+            width: max(0, bounds.width - x - content.paddingRight),
+            height: bounds.height
+        )
+    }
+
+    private func drawTitle(_ text: NSAttributedString, in rect: NSRect, offsetY: CGFloat) {
+        let size = text.size()
+        text.draw(at: NSPoint(x: rect.minX, y: (rect.height - size.height) / 2 + offsetY))
     }
 
     private func styledTitle(_ text: String, content: BarContent) -> NSAttributedString {
@@ -266,29 +301,6 @@ final class BarView: NSView {
         case .liquidGlass, .transparent:
             break
         }
-    }
-
-    private func drawScrolling(_ text: NSAttributedString, in rect: NSRect, offsetY: CGFloat) {
-        let size = text.size()
-        let y = (rect.height - size.height) / 2 + offsetY
-
-        guard size.width > rect.width else {
-            text.draw(at: NSPoint(x: rect.minX, y: y))
-            return
-        }
-
-        NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(rect: rect).addClip()
-
-        let loop = size.width + 24
-        let offset = scrollOffset.truncatingRemainder(dividingBy: loop)
-        var drawX = rect.minX - offset
-        while drawX < rect.maxX {
-            text.draw(at: NSPoint(x: drawX, y: y))
-            drawX += loop
-        }
-
-        NSGraphicsContext.restoreGraphicsState()
     }
 
     private func truncated(_ text: String, content: BarContent, width: CGFloat) -> String {
