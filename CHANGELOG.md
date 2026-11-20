@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The title no longer flickers when switching spaces, by any method. The panel joins every Space and is never rebuilt, ordered out, or faded for a space change.
+- Space changes update the title immediately, and the outgoing title moves clear of menus that are still changing instead of covering them.
+- The title stays up while a new app's menus settle, then changes, instead of blanking and fading in.
+- The title no longer appears briefly on another app's full-screen Space before hiding.
+
 ## [1.1.2] - 2026-11-16
 
 ### Fixed

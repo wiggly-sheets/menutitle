@@ -30,6 +30,8 @@ final class BarController: NSObject {
     private var settleDeadline = Date.distantPast
     private var retryCount = 0
     private var lastPanelRebuild = Date.distantPast
+    private var skipNextFade = false
+    private let panelBehavior: NSWindow.CollectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
 
     override init() {
         panel = BarPanel(
@@ -56,12 +58,13 @@ final class BarController: NSObject {
     private func configurePanel(_ target: BarPanel) {
         target.isFloatingPanel = true
         target.level = .statusBar
-        target.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        target.collectionBehavior = panelBehavior
         target.hidesOnDeactivate = false
         target.isOpaque = false
         target.backgroundColor = .clear
         target.hasShadow = false
         target.animationBehavior = .none
+        target.displaysWhenScreenProfileChanges = true
     }
 
     // Sleep, wake, and login screen switching can strand the panel on a Space
@@ -84,15 +87,18 @@ final class BarController: NSObject {
         old.orderOut(nil)
         lastRenderKey = nil
         if wasVisible {
-            replacement.alphaValue = 0
+            replacement.alphaValue = old.alphaValue
             replacement.orderFrontRegardless()
             scheduleRefresh(after: 0.05)
         }
     }
 
-    private func ensureOnActiveSpace() {
-        guard panel.isVisible, !panel.isOnActiveSpace else { return }
-        rebuildPanel()
+    // Runs after the space transition settles. The panel already lives on every
+    // Space, so only the title needs to change.
+    @objc private func activeSpaceDidChange() {
+        lastRenderKey = nil
+        skipNextFade = true
+        scheduleRefresh(after: 0)
     }
 
     @objc private func systemDidWake() {
@@ -117,6 +123,12 @@ final class BarController: NSObject {
             self,
             selector: #selector(refresh),
             name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(activeSpaceDidChange),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil
         )
         NotificationCenter.default.addObserver(
@@ -159,6 +171,25 @@ final class BarController: NSObject {
         refresh()
     }
 
+    // Keeps the outgoing title to the right of menus that are still changing.
+    private func moveClear(of menuBar: MenuBarGeometry.MenuBar) {
+        let defaults = UserDefaults.standard
+        guard panel.isVisible,
+              !defaults.bool(forKey: Pref.customPosition),
+              let screen = MenuBarGeometry.screen(forAXPoint: menuBar.anchor) else { return }
+        let x = max(
+            menuBar.endX + CGFloat(defaults.double(forKey: Pref.gap))
+                + CGFloat(defaults.double(forKey: Pref.leftInset)),
+            screen.frame.minX + 2
+        )
+        var frame = panel.frame
+        guard frame.minX < x else { return }
+        frame.origin.x = x
+        frame.size.width = min(frame.width, screen.frame.maxX - x - 2)
+        guard frame.width >= 24 else { return }
+        panel.setFrame(frame, display: true)
+    }
+
     private func scheduleRefresh(after delay: TimeInterval = 0.05) {
         refreshWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.refresh() }
@@ -167,7 +198,6 @@ final class BarController: NSObject {
     }
 
     private func updateMenuState() {
-        ensureOnActiveSpace()
         let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
         let hides = UserDefaults.standard.bool(forKey: Pref.hideOnMenuOpen)
         let range = panel.frame.width > 1
@@ -205,13 +235,21 @@ final class BarController: NSObject {
             lastFrontPid = frontPid
             retryCount = 0
             // The menu bar still shows the previous app's menus for a moment.
-            settleDeadline = Date().addingTimeInterval(0.18)
-            hide()
+            // Keep the old title up until the new one is ready, like the menus.
+            settleDeadline = Date().addingTimeInterval(0.1)
         }
 
         let remaining = settleDeadline.timeIntervalSinceNow
         if remaining > 0 {
-            scheduleRefresh(after: remaining)
+            // Track menus while they change so the old title never covers them.
+            queue.async { [weak self] in
+                let menuBar = MenuBarGeometry.menuBar(pid: frontPid)
+                DispatchQueue.main.async {
+                    guard let self, let menuBar else { return }
+                    self.moveClear(of: menuBar)
+                }
+            }
+            scheduleRefresh(after: min(remaining, 0.05))
             return
         }
 
@@ -502,10 +540,11 @@ final class BarController: NSObject {
         )
         view.needsDisplay = true
         if !panel.isVisible {
-            panel.alphaValue = 0
+            panel.alphaValue = skipNextFade ? 1 : 0
             panel.orderFrontRegardless()
             view.resumeScrolling()
         }
+        skipNextFade = false
         if panel.alphaValue < 1 {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.12

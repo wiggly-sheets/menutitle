@@ -35,7 +35,7 @@
 
 MenuTitle shows the title of the focused window next to the front app's menus. It asks [yabai](https://github.com/koekeishiya/yabai) for the window, measures the native menus through Accessibility, and draws a small floating panel in the remaining space.
 
-The title moves as menus change width and stops before the notch or the next menu bar item. During an app switch it clears out, then fades in after the new app's menus settle. When there is not enough room, it can shorten, shrink, or scroll the title instead of covering something else.
+The title moves as menus change width and stops before the notch or the next menu bar item. It stays up while the next app's menus settle, like the native menu bar, then changes to the new title. When there is not enough room, it can shorten, shrink, or scroll the title instead of covering something else.
 
 > [!NOTE]
 > MenuTitle needs Accessibility access to measure the menu bar and read the front app's menus. Without it, the title stays hidden rather than guessing a position.
