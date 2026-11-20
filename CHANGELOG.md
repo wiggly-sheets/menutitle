@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-11-20
+
 ### Fixed
 - The title no longer flickers when switching spaces, by any method. The panel joins every Space and is never rebuilt, ordered out, or faded for a space change.
 - Space changes update the title immediately, and the outgoing title moves clear of menus that are still changing instead of covering them.
