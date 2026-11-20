@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A long title no longer covers the next app's menus during a space change. The panel moves clear as soon as the space changes, then tracks the menus frame by frame without re-running the title query until their width holds steady.
 - App icons load off the main thread and are cached per app, so a space change never waits for icon data. If no room is left beside the menus, the title hides instead of covering them.
 - The title clears as soon as the front app's last window closes, instead of keeping the last window's title. A window that yabai still reports is ignored if it belongs to another app.
+- The menu bar query that moves the title clear of menus now runs off the main thread, one query at a time, so an app that stops responding can no longer freeze the title or the settings window.
+- A short title now stays visible beside the menus instead of hiding, and a title hidden for lack of room comes back when room returns. Menu tracking also stays alive while the title is hidden.
 
 ## [1.1.3] - 2026-11-20
 

@@ -28,6 +28,7 @@ final class BarController: NSObject {
     private var pending = false
     private var lastFrontPid: pid_t?
     private var clampTimer: Timer?
+    private var clampBusy = false
     private var clampUntil = Date.distantPast
     private var clampStableTicks = 0
     private var lastClampEndX: CGFloat?
@@ -229,32 +230,60 @@ final class BarController: NSObject {
 
     // Moves the panel clear of the current app's menus without rebuilding its
     // content, so a long title cannot cover them while the title query runs.
-    // Returns the menu end for tracking, or nil when there is nothing to measure.
-    @discardableResult
-    private func clampToMenus() -> CGFloat? {
+    // The AX walk runs on the query queue, so a hung app cannot block the main
+    // thread. Reports the menu end to `onEnd` for tracking.
+    private func clampToMenus(onEnd: ((CGFloat?) -> Void)? = nil) {
         let defaults = UserDefaults.standard
         guard panel.isVisible,
               !view.isDragging,
               !defaults.bool(forKey: Pref.customPosition),
               let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
-              let menuBar = MenuBarGeometry.menuBar(pid: pid, timeout: 0.05),
-              let screen = MenuBarGeometry.screen(forAXPoint: menuBar.anchor) else { return nil }
-        let x = max(
-            menuBar.endX + CGFloat(defaults.double(forKey: Pref.gap))
-                + CGFloat(defaults.double(forKey: Pref.leftInset)),
-            screen.frame.minX + 2
-        )
-        var frame = panel.frame
-        guard frame.minX < x else { return menuBar.endX }
-        frame.origin.x = x
-        frame.size.width = min(frame.width, screen.frame.maxX - x - 2)
-        guard frame.width >= 24 else {
-            skipNextFade = true
-            hide()
-            return menuBar.endX
+              !clampBusy else { return }
+        clampBusy = true
+        let gap = CGFloat(defaults.double(forKey: Pref.gap))
+        let inset = CGFloat(defaults.double(forKey: Pref.leftInset))
+        let screenFrames = NSScreen.screens.map { $0.frame }
+        queue.async { [weak self] in
+            let menuBar = MenuBarGeometry.menuBar(pid: pid, timeout: 0.05)
+            var endX: CGFloat?
+            var screenFrame: NSRect?
+            if let menuBar, let primary = screenFrames.first {
+                let point = CGPoint(x: menuBar.anchor.x, y: primary.maxY - menuBar.anchor.y)
+                if let screen = screenFrames.first(where: { $0.contains(point) }) ?? screenFrames.first {
+                    endX = menuBar.endX
+                    screenFrame = screen
+                }
+            }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.clampBusy = false
+                guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
+                    onEnd?(nil)
+                    return
+                }
+                // Read the frame now: apply() can resize the panel while the query runs.
+                let current = self.panel.frame
+                if let endX, let screenFrame {
+                    let x = max(endX + gap + inset, screenFrame.minX + 2)
+                    if current.minX < x {
+                        let available = screenFrame.maxX - x - 2
+                        // A short title still fits; hide only when no room is left.
+                        if available < 24 {
+                            self.skipNextFade = true
+                            self.hide()
+                            // Free room can come back without another title change.
+                            self.scheduleRefresh(after: 0.25)
+                        } else if self.panel.isVisible, !self.view.isDragging {
+                            var frame = current
+                            frame.origin.x = x
+                            frame.size.width = min(current.width, available)
+                            self.panel.setFrame(frame, display: true)
+                        }
+                    }
+                }
+                onEnd?(endX)
+            }
         }
-        panel.setFrame(frame, display: true)
-        return menuBar.endX
     }
 
     // The destination Space's menus can keep changing after the app activates.
@@ -270,26 +299,29 @@ final class BarController: NSObject {
                 timer.invalidate()
                 return
             }
-            guard self.panel.isVisible else {
-                self.stopClampTracking()
-                return
-            }
             if Date() >= self.clampUntil {
                 self.stopClampTracking()
                 return
             }
-            guard let endX = self.clampToMenus() else {
+            // Stay alive while hidden, so a panel that comes back is placed at once.
+            guard self.panel.isVisible else {
                 self.clampStableTicks = 0
                 return
             }
-            if endX == self.lastClampEndX {
-                self.clampStableTicks += 1
-            } else {
-                self.clampStableTicks = 0
-                self.lastClampEndX = endX
-            }
-            if self.clampStableTicks >= 15 {
-                self.stopClampTracking()
+            self.clampToMenus { endX in
+                guard let endX else {
+                    self.clampStableTicks = 0
+                    return
+                }
+                if endX == self.lastClampEndX {
+                    self.clampStableTicks += 1
+                } else {
+                    self.clampStableTicks = 0
+                    self.lastClampEndX = endX
+                }
+                if self.clampStableTicks >= 15 {
+                    self.stopClampTracking()
+                }
             }
         }
         RunLoop.main.add(timer, forMode: .common)
