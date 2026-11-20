@@ -30,8 +30,7 @@ final class BarController: NSObject {
     private var clampTimer: Timer?
     private var clampBusy = false
     private var clampUntil = Date.distantPast
-    private var clampStableTicks = 0
-    private var lastClampEndX: CGFloat?
+    private var clampTracker = StableEndXTracker()
     private let iconQueue = DispatchQueue(label: "com.wigglysheets.menutitle.icon")
     // Reserves the icon slot while the real icon loads, so the panel width
     // does not jump when it arrives.
@@ -267,19 +266,22 @@ final class BarController: NSObject {
                 // Read the frame now: apply() can resize the panel while the query runs.
                 let current = self.panel.frame
                 if let endX, let screenFrame {
-                    let x = max(endX + gap + inset, screenFrame.minX + 2)
-                    if current.minX < x {
-                        let available = screenFrame.maxX - x - 2
-                        // A short title still fits; hide only when no room is left.
-                        if available < 24 {
-                            self.skipNextFade = true
-                            self.hide()
-                            // Free room can come back without another title change.
-                            self.scheduleRefresh(after: 0.25)
-                        } else if self.panel.isVisible, !self.view.isDragging {
-                            var frame = current
-                            frame.origin.x = x
-                            frame.size.width = min(current.width, available)
+                    switch ClampPolicy.decision(
+                        current: current,
+                        endX: endX,
+                        gap: gap,
+                        inset: inset,
+                        screen: screenFrame
+                    ) {
+                    case .keep:
+                        break
+                    case .hide:
+                        self.skipNextFade = true
+                        self.hide()
+                        // Free room can come back without another title change.
+                        self.scheduleRefresh(after: 0.25)
+                    case .move(let frame):
+                        if self.panel.isVisible, !self.view.isDragging {
                             self.panel.setFrame(frame, display: true)
                         }
                     }
@@ -294,8 +296,7 @@ final class BarController: NSObject {
     private func startClampTracking() {
         guard !UserDefaults.standard.bool(forKey: Pref.customPosition) else { return }
         clampUntil = Date().addingTimeInterval(2.5)
-        clampStableTicks = 0
-        lastClampEndX = nil
+        clampTracker.reset()
         guard clampTimer == nil else { return }
         let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] timer in
             guard let self else {
@@ -308,21 +309,11 @@ final class BarController: NSObject {
             }
             // Stay alive while hidden, so a panel that comes back is placed at once.
             guard self.panel.isVisible else {
-                self.clampStableTicks = 0
+                self.clampTracker.resetTicks()
                 return
             }
             self.clampToMenus { endX in
-                guard let endX else {
-                    self.clampStableTicks = 0
-                    return
-                }
-                if endX == self.lastClampEndX {
-                    self.clampStableTicks += 1
-                } else {
-                    self.clampStableTicks = 0
-                    self.lastClampEndX = endX
-                }
-                if self.clampStableTicks >= 15 {
+                if self.clampTracker.record(endX) {
                     self.stopClampTracking()
                 }
             }
@@ -334,8 +325,7 @@ final class BarController: NSObject {
     private func stopClampTracking() {
         clampTimer?.invalidate()
         clampTimer = nil
-        clampStableTicks = 0
-        lastClampEndX = nil
+        clampTracker.reset()
     }
 
     private func scheduleRefresh(after delay: TimeInterval = 0.05) {
