@@ -238,31 +238,6 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("App font").frame(width: 120, alignment: .leading)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(fontLoaded
-                        ? (fontRelease.isEmpty ? "Installed" : "Installed \(fontRelease)")
-                        : "Not installed")
-                    if let fontStatus {
-                        Text(fontStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                Button(fontChecking ? "Checking…" : "Check Now") {
-                    checkAppFont()
-                }
-                .disabled(fontChecking)
-            }
-
-            Picker("Font updates", selection: $fontUpdateMode) {
-                ForEach(FontUpdateMode.allCases) { mode in
-                    Text(mode.title).tag(mode.rawValue)
-                }
-            }
-
-            HStack {
                 Text("Font").frame(width: 120, alignment: .leading)
                 Text(fontDescription(fontFamily, fontTraits))
                     .foregroundStyle(.secondary)
@@ -316,11 +291,7 @@ struct SettingsView: View {
         } header: {
             Text("Appearance")
         } footer: {
-            if iconStyle == IconStyle.appFont.rawValue && !fontLoaded {
-                Text("sketchybar-app-font.ttf is not installed. MenuTitle downloads it from GitHub in the background. You can also install it with SketchyBar.")
-            } else {
-                Text("The font panel sets the family, style, and size. The size slider stays in sync. Linked padding applies one value to all four sides; unlinked, each side is independent. Extra vertical inset trims the top and bottom further.")
-            }
+            Text("The font panel sets the family, style, and size. The size slider stays in sync. Linked padding applies one value to all four sides; unlinked, each side is independent. Extra vertical inset trims the top and bottom further.")
         }
     }
 
@@ -523,6 +494,39 @@ struct SettingsView: View {
                 Text("Approve MenuTitle in System Settings > General > Login Items.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+
+        Section {
+            HStack {
+                Text("App font").frame(width: 120, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(fontLoaded
+                        ? (fontRelease.isEmpty ? "Installed" : "Installed \(fontRelease)")
+                        : "Not installed")
+                    if let fontStatus {
+                        Text(fontStatus)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button(fontChecking ? "Checking…" : "Check Now") {
+                    checkAppFont()
+                }
+                .disabled(fontChecking)
+            }
+
+            Picker("Font updates", selection: $fontUpdateMode) {
+                ForEach(FontUpdateMode.allCases) { mode in
+                    Text(mode.title).tag(mode.rawValue)
+                }
+            }
+        } header: {
+            Text("App font")
+        } footer: {
+            if !fontLoaded {
+                Text("sketchybar-app-font.ttf is not installed. MenuTitle downloads it from GitHub in the background. You can also install it with SketchyBar.")
             }
         }
 
