@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- The panel keeps the app icon's slot while the icon loads, so the width no longer jumps when the icon arrives.
+- A custom position saved on the display the panel was dragged to is now used, instead of jumping back to the menu bar's display.
+- The status item title is capped at 40 characters, so a long uncapped title no longer takes most of the menu bar.
 - The title and app icon now change together during a space change. The title no longer waits for the menus to settle, and it keeps moving clear as they change.
 - A long title no longer covers the next app's menus during a space change. The panel moves clear as soon as the space changes, then tracks the menus frame by frame without re-running the title query until their width holds steady.
 - App icons load off the main thread and are cached per app, so a space change never waits for icon data. If no room is left beside the menus, the title hides instead of covering them.

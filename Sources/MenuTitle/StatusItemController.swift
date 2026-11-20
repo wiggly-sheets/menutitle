@@ -1,6 +1,10 @@
 import AppKit
 
 final class StatusItemController: NSObject {
+    // The status item shares the menu bar with the menus, and a mirrored title
+    // can be uncapped (maxLength 0). Cap it so a long title cannot take most of
+    // the bar.
+    private static let maxTitleLength = 40
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var onAction: ((Int) -> Void)?
 
@@ -39,7 +43,10 @@ final class StatusItemController: NSObject {
         if content.letterSpacing != 0 {
             attributes[.kern] = content.letterSpacing
         }
-        title.append(NSAttributedString(string: content.title, attributes: attributes))
+        title.append(NSAttributedString(
+            string: TitleCleaner.truncate(content.title, maxLength: Self.maxTitleLength, style: .end),
+            attributes: attributes
+        ))
 
         button.attributedTitle = title
         button.image = content.icon

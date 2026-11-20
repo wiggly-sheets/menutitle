@@ -33,6 +33,9 @@ final class BarController: NSObject {
     private var clampStableTicks = 0
     private var lastClampEndX: CGFloat?
     private let iconQueue = DispatchQueue(label: "com.wigglysheets.menutitle.icon")
+    // Reserves the icon slot while the real icon loads, so the panel width
+    // does not jump when it arrives.
+    private static let placeholderIcon = NSImage(size: NSSize(width: 1, height: 1))
     private var icons: [pid_t: NSImage] = [:]
     private var iconLoads: Set<pid_t> = []
     private var retryCount = 0
@@ -436,6 +439,7 @@ final class BarController: NSObject {
             return
         }
 
+        let positionScreen = panel.screen ?? screen
         var keyParts: [String] = [
             info.app, info.title, String(info.pid), String(info.fullscreen),
             "\(menuBar.endX)", "\(menuBar.anchor.x)", "\(menuBar.anchor.y)", String(describing: screen.frame),
@@ -477,7 +481,7 @@ final class BarController: NSObject {
             "\(defaults.bool(forKey: Pref.customPosition))",
             "\(defaults.bool(forKey: Pref.lockPosition))",
             displayKey(screen),
-            savedPosition(for: screen).map { "\($0.x),\($0.y)" } ?? "",
+            savedPosition(for: positionScreen).map { "\($0.x),\($0.y)" } ?? "",
             "\(defaults.bool(forKey: Pref.statusItemMirrorsTitle))",
             defaults.string(forKey: Pref.statusItemIconStyle) ?? "",
             defaults.string(forKey: Pref.statusItemFontFamily) ?? "",
@@ -578,7 +582,7 @@ final class BarController: NSObject {
                     )
                 }
             case .native:
-                icon = cachedIcon(for: info.pid)
+                icon = cachedIcon(for: info.pid) ?? Self.placeholderIcon
             }
             return BarContent(
                 title: title,
@@ -649,7 +653,9 @@ final class BarController: NSObject {
         let frame: NSRect
         if customPosition {
             var origin: NSPoint
-            if let saved = savedPosition(for: screen) {
+            // The panel may have been dragged to another display, so prefer the
+            // position saved for the display it is on now.
+            if let saved = savedPosition(for: positionScreen) ?? savedPosition(for: screen) {
                 origin = saved
             } else {
                 origin = NSPoint(x: x, y: screen.frame.maxY - barHeight)
