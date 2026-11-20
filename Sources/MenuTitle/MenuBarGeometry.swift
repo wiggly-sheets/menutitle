@@ -14,6 +14,11 @@ enum MenuBarGeometry {
         return max(NSStatusBar.system.thickness, 24)
     }
 
+    /// Top edge of a screen in AX (top-left origin) coordinates.
+    private static func axTop(for screen: NSScreen) -> CGFloat {
+        (NSScreen.screens.first?.frame.maxY ?? screen.frame.maxY) - screen.frame.maxY
+    }
+
     /// Left edge of the camera housing on screens that have a notch.
     static func notchLeftX(for screen: NSScreen) -> CGFloat? {
         guard screen.safeAreaInsets.top > 0,
@@ -97,17 +102,21 @@ enum MenuBarGeometry {
               ) as? [[String: Any]] else { return false }
 
         let menuLevel = Int(CGWindowLevelForKey(.popUpMenuWindow))
-        let screenWidth = NSScreen.screens.first?.frame.width ?? 2000
         for window in windows {
             guard let layer = window[kCGWindowLayer as String] as? Int,
                   layer >= menuLevel, layer <= menuLevel + 2,
                   let owner = window[kCGWindowOwnerPID as String] as? Int, owner == Int(pid),
                   let bounds = window[kCGWindowBounds as String] as? NSDictionary,
                   let x = (bounds["X"] as? NSNumber)?.doubleValue,
-                  let y = (bounds["Y"] as? NSNumber)?.doubleValue, y < 20,
+                  let y = (bounds["Y"] as? NSNumber)?.doubleValue,
                   let width = (bounds["Width"] as? NSNumber)?.doubleValue,
                   let height = (bounds["Height"] as? NSNumber)?.doubleValue,
-                  width > 40, width < screenWidth * 0.6, height > 40 else { continue }
+                  width > 40, height > 40,
+                  // Probe just inside the top edge, since a point on the edge
+                  // itself belongs to no screen.
+                  let screen = screen(forAXPoint: CGPoint(x: x + width / 2, y: y + 1)),
+                  abs(y - Double(axTop(for: screen))) <= 2,
+                  width < Double(screen.frame.width) * 0.6 else { continue }
             if let overlappingX,
                x + width <= overlappingX.lowerBound || x >= overlappingX.upperBound {
                 continue
@@ -125,17 +134,18 @@ enum MenuBarGeometry {
             kCGNullWindowID
         ) as? [[String: Any]] else { return false }
 
-        let minWidth = (NSScreen.screens.map { $0.frame.width }.max() ?? 1710) * 0.5
-        let minHeight = (NSScreen.screens.map { $0.frame.height }.max() ?? 1112) * 0.5
-
         for window in windows {
             guard let layer = window[kCGWindowLayer as String] as? Int, layer == 19,
                   let owner = window[kCGWindowOwnerPID as String] as? Int,
                   NSRunningApplication(processIdentifier: pid_t(owner))?.bundleIdentifier == "com.apple.WindowManager",
                   let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+                  let x = (bounds["X"] as? NSNumber)?.doubleValue,
+                  let y = (bounds["Y"] as? NSNumber)?.doubleValue,
                   let width = (bounds["Width"] as? NSNumber)?.doubleValue,
                   let height = (bounds["Height"] as? NSNumber)?.doubleValue,
-                  width >= minWidth, height >= minHeight else { continue }
+                  let screen = screen(forAXPoint: CGPoint(x: x + width / 2, y: y + height / 2)),
+                  width >= Double(screen.frame.width) * 0.5,
+                  height >= Double(screen.frame.height) * 0.5 else { continue }
             return true
         }
         return false
