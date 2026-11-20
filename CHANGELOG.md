@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-11-20
+
 ### Fixed
 - The panel keeps the app icon's slot while the icon loads, so the width no longer jumps when the icon arrives.
 - A custom position saved on the display the panel was dragged to is now used, instead of jumping back to the menu bar's display.
