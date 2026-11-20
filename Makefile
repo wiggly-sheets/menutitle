@@ -14,7 +14,7 @@ VERSION ?= $(LOCAL_VERSION)
 BUILD_NUMBER ?= 1
 DIST_DIR := dist
 APP_BUNDLE := $(DIST_DIR)/$(APP_NAME).app
-INSTALL_DIR ?= $(HOME)/Applications
+INSTALL_DIR ?= /Applications
 INSTALL_APP := $(INSTALL_DIR)/$(APP_NAME).app
 RELEASE_DIR := release
 DMG := $(RELEASE_DIR)/$(APP_NAME)-$(VERSION).dmg
@@ -49,7 +49,7 @@ help:
 		'  release-artifacts     Build the disk image and its checksum file, then verify the checksum.' \
 		'  release-notes VERSION=x.y.z  Print the changelog section of a version.' \
 		'  release VERSION=x.y.z  Bump the changelog, test, build, verify, commit and tag.' \
-		'  install               Copy the app bundle into ~/Applications.' \
+		'  install               Copy the app bundle into /Applications.' \
 		'  run                   Install the app bundle and launch it.' \
 		'  clean                 Remove .build/, dist/ and release/.' \
 		'' \
