@@ -99,6 +99,23 @@ final class BarController: NSObject {
         lastRenderKey = nil
         skipNextFade = true
         scheduleRefresh(after: 0)
+        // A panel can lose its Space binding after sleep.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.repairSpaceBinding()
+        }
+    }
+
+    // Rejoining a stranded panel needs a new window, but try the cheaper
+    // re-registration first so a healthy panel never flashes.
+    private func repairSpaceBinding() {
+        guard panel.isVisible, !panel.isOnActiveSpace else { return }
+        panel.collectionBehavior = []
+        panel.collectionBehavior = panelBehavior
+        panel.orderFrontRegardless()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, self.panel.isVisible, !self.panel.isOnActiveSpace else { return }
+            self.rebuildPanel()
+        }
     }
 
     @objc private func systemDidWake() {
@@ -108,7 +125,13 @@ final class BarController: NSObject {
         lastRenderKey = nil
         retryCount = 0
         settleDeadline = .distantPast
-        rebuildPanel()
+        // A window made during wake can stay tied to the Space that was active
+        // before sleep. Replace it once the WindowServer has settled.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self else { return }
+            self.rebuildPanel()
+            self.scheduleRefresh(after: 0.05)
+        }
         scheduleRefresh(after: 0.5)
     }
 
