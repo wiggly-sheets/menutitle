@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Title scrolling now runs as a Core Animation transform instead of redrawing the view every frame, so scrolling no longer costs about 11% CPU.
+- The app font status and update controls moved from Appearance to General.
+
 ## [1.1.4] - 2026-11-20
 
 ### Fixed
