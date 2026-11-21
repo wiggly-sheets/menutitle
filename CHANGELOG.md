@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Title bar position setting: next to app menus, left or right of the notch, centered on a display without a notch, or a custom position that can be locked.
+
+### Changed
+- Placement and Position settings now share one Position pane.
+
+### Fixed
+- The Position picker keeps the selected position instead of snapping back to next to app menus.
+
 ## [1.1.5] - 2026-11-20
 
 ### Changed

@@ -19,13 +19,18 @@ enum MenuBarGeometry {
         (NSScreen.screens.first?.frame.maxY ?? screen.frame.maxY) - screen.frame.maxY
     }
 
-    /// Left edge of the camera housing on screens that have a notch.
-    static func notchLeftX(for screen: NSScreen) -> CGFloat? {
+    /// Left and right edges of the camera housing on screens that have a notch.
+    static func notchBounds(for screen: NSScreen) -> (left: CGFloat, right: CGFloat)? {
         guard screen.safeAreaInsets.top > 0,
               let left = screen.auxiliaryTopLeftArea,
               let right = screen.auxiliaryTopRightArea,
               left.maxX < right.minX else { return nil }
-        return left.maxX
+        return (left.maxX, right.minX)
+    }
+
+    /// Left edge of the camera housing on screens that have a notch.
+    static func notchLeftX(for screen: NSScreen) -> CGFloat? {
+        notchBounds(for: screen)?.left
     }
 
     /// Right edge of the front app's menu bar items and a point on that menu bar.

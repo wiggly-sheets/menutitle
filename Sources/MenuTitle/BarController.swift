@@ -253,7 +253,7 @@ final class BarController: NSObject {
         let defaults = UserDefaults.standard
         guard panel.isVisible,
               !view.isDragging,
-              !defaults.bool(forKey: Pref.customPosition),
+              PanelPosition.current(defaults) == .menus,
               let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
               !clampBusy else { return }
         clampBusy = true
@@ -309,7 +309,7 @@ final class BarController: NSObject {
     // The destination Space's menus can keep changing after the app activates.
     // Track them for a while, but stop as soon as their width holds steady.
     private func startClampTracking() {
-        guard !UserDefaults.standard.bool(forKey: Pref.customPosition) else { return }
+        guard PanelPosition.current() == .menus else { return }
         clampUntil = Date().addingTimeInterval(2.5)
         clampTracker.reset()
         guard clampTimer == nil else { return }
@@ -492,6 +492,7 @@ final class BarController: NSObject {
             "\(defaults.bool(forKey: Pref.showPanel))",
             "\(defaults.bool(forKey: Pref.showStatusItem))",
             "\(defaults.bool(forKey: Pref.customPosition))",
+            PanelPosition.current(defaults).rawValue,
             "\(defaults.bool(forKey: Pref.lockPosition))",
             displayKey(screen),
             savedPosition(for: positionScreen).map { "\($0.x),\($0.y)" } ?? "",
@@ -509,7 +510,8 @@ final class BarController: NSObject {
 
         let showPanel = defaults.bool(forKey: Pref.showPanel)
         let showStatusItem = defaults.bool(forKey: Pref.showStatusItem)
-        let customPosition = defaults.bool(forKey: Pref.customPosition)
+        let position = PanelPosition.current(defaults)
+        let customPosition = position == .custom
         let lockPosition = defaults.bool(forKey: Pref.lockPosition)
 
         let barHeight = MenuBarGeometry.height(for: screen)
@@ -558,28 +560,48 @@ final class BarController: NSObject {
             ? cleanedTitle
             : TitleCleaner.truncate(cleanedTitle, maxLength: defaults.integer(forKey: Pref.maxLength), style: truncation)
 
-        let x = max(menuBar.endX + gap + inset, screen.frame.minX + 2)
-        var cap = maxWidth
-        if customPosition {
-            cap = min(cap, screen.frame.width - 4)
-        } else {
-            if let notch = MenuBarGeometry.notchLeftX(for: screen), x < notch {
-                cap = min(cap, notch - x - gap)
-            }
-            if let limit = MenuBarGeometry.leftmostObstructionX(
+        let menuX = max(menuBar.endX + gap + inset, screen.frame.minX + 2)
+        let notch = MenuBarGeometry.notchBounds(for: screen)
+        let obstructionX: CGFloat?
+        switch position {
+        case .menus:
+            obstructionX = MenuBarGeometry.leftmostObstructionX(
                 screen: screen,
                 barHeight: barHeight,
-                afterX: x,
+                afterX: menuX,
                 excludingPid: ProcessInfo.processInfo.processIdentifier
-            ) {
-                cap = min(cap, limit - x - gap)
-            }
-            cap = min(cap, screen.frame.maxX - x - 2)
+            )
+        case .notchRight:
+            obstructionX = MenuBarGeometry.leftmostObstructionX(
+                screen: screen,
+                barHeight: barHeight,
+                afterX: (notch?.right ?? menuX) + gap,
+                excludingPid: ProcessInfo.processInfo.processIdentifier
+            )
+        case .center:
+            obstructionX = MenuBarGeometry.leftmostObstructionX(
+                screen: screen,
+                barHeight: barHeight,
+                afterX: screen.frame.midX,
+                excludingPid: ProcessInfo.processInfo.processIdentifier
+            )
+        case .notchLeft, .custom:
+            obstructionX = nil
         }
-        guard cap >= 24 else {
+        guard let placement = TitlePlacement.place(
+            position: position,
+            screen: screen.frame,
+            menuEndX: menuBar.endX,
+            notch: notch,
+            gap: gap,
+            inset: inset,
+            maximumWidth: maxWidth,
+            obstructionX: obstructionX
+        ) else {
             hide()
             return
         }
+        let cap = placement.maximumWidth
 
         func makeContent(_ size: CGFloat, _ family: String, _ traits: Int, _ style: IconStyle) -> BarContent {
             let font = FontResolver.font(family: family, size: size, traits: traits)
@@ -673,7 +695,7 @@ final class BarController: NSObject {
             if let saved = savedPosition(for: positionScreen) ?? savedPosition(for: screen) {
                 origin = saved
             } else {
-                origin = NSPoint(x: x, y: screen.frame.maxY - barHeight)
+                origin = NSPoint(x: menuX, y: screen.frame.maxY - barHeight)
                 savePosition(origin, screen: screen)
             }
             let target = NSScreen.screens.first { $0.frame.contains(origin) } ?? screen
@@ -682,7 +704,7 @@ final class BarController: NSObject {
             frame = NSRect(origin: origin, size: NSSize(width: width, height: barHeight))
         } else {
             frame = NSRect(
-                x: x,
+                x: placement.x(for: width),
                 y: screen.frame.maxY - barHeight,
                 width: width,
                 height: barHeight

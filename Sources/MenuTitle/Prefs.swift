@@ -42,6 +42,7 @@ enum Pref {
     static let showStatusItem = "showStatusItem"
     static let customPosition = "customPosition"
     static let lockPosition = "lockPosition"
+    static let panelPosition = "panelPosition"
     static let positionXByDisplay = "positionXByDisplay"
     static let positionYByDisplay = "positionYByDisplay"
     static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
@@ -211,6 +212,36 @@ enum PlacementMode: String, CaseIterable, Identifiable {
         case .menuBarItem: return "Menu bar item"
         case .both: return "Both"
         }
+    }
+}
+
+enum PanelPosition: String, CaseIterable, Identifiable {
+    case menus
+    case notchLeft
+    case notchRight
+    case center
+    case custom
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .menus: return "Next to app menus"
+        case .notchLeft: return "Left of notch"
+        case .notchRight: return "Right of notch"
+        case .center: return "Centered"
+        case .custom: return "Custom position"
+        }
+    }
+
+    /// Stored position, falling back to the old custom-position toggle so
+    /// existing settings keep working.
+    static func current(_ defaults: UserDefaults = .standard) -> PanelPosition {
+        if let raw = defaults.string(forKey: Pref.panelPosition),
+           let position = PanelPosition(rawValue: raw) {
+            return position
+        }
+        return defaults.bool(forKey: Pref.customPosition) ? .custom : .menus
     }
 }
 

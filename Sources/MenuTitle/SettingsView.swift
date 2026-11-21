@@ -5,7 +5,6 @@ import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
     case appearance
-    case placement
     case clicking
     case title
     case position
@@ -17,7 +16,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .appearance: return "Appearance"
-        case .placement: return "Placement"
         case .clicking: return "Clicking"
         case .title: return "Title"
         case .position: return "Position"
@@ -29,7 +27,6 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .appearance: return "paintbrush"
-        case .placement: return "rectangle.3.group"
         case .clicking: return "cursorarrow.click"
         case .title: return "textformat"
         case .position: return "arrow.left.and.right"
@@ -88,6 +85,7 @@ struct SettingsView: View {
     @AppStorage(Pref.statusItemRightClickAction) private var statusItemRightClickAction = ClickAction.showMenu.rawValue
     @AppStorage(Pref.customPosition) private var customPosition = false
     @AppStorage(Pref.lockPosition) private var lockPosition = false
+    @AppStorage(Pref.panelPosition) private var panelPosition = PanelPosition.menus.rawValue
 
     @State private var pane: SettingsPane? = .appearance
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
@@ -172,6 +170,12 @@ struct SettingsView: View {
             accessibilityTrusted = AXIsProcessTrusted()
             launchAtLogin = LaunchAtLogin.isEnabled
             loginNeedsApproval = LaunchAtLogin.needsApproval
+            // Move an old custom-position toggle into the stored position.
+            panelPosition = PanelPosition.current().rawValue
+        }
+        .onChange(of: panelPosition) { _, raw in
+            // Keep the old toggle in sync so earlier versions read the same choice.
+            customPosition = raw == PanelPosition.custom.rawValue
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             accessibilityTrusted = AXIsProcessTrusted()
@@ -186,7 +190,6 @@ struct SettingsView: View {
     private func content(for pane: SettingsPane) -> some View {
         switch pane {
         case .appearance: appearance
-        case .placement: placement
         case .clicking: clicking
         case .title: titleSettings
         case .position: position
@@ -296,66 +299,6 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var placement: some View {
-        Section {
-            Picker("Show", selection: placementMode) {
-                ForEach(PlacementMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            if showPanel {
-                Toggle("Use custom position", isOn: $customPosition)
-                if customPosition {
-                    Toggle("Lock position", isOn: $lockPosition)
-                    Text("Drag the title to move it. The position is remembered.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } header: {
-            Text("Where to show")
-        } footer: {
-            Text("Both can be shown at once. The menu bar item always uses the same title text.")
-        }
-
-        if showStatusItem {
-            Section {
-                Toggle("Use title appearance", isOn: $statusItemMirrorsTitle)
-
-                if !statusItemMirrorsTitle {
-                    Picker("Item icon", selection: $statusItemIconStyle) {
-                        ForEach(IconStyle.allCases) { style in
-                            Text(style.title).tag(style.rawValue)
-                        }
-                    }
-
-                    HStack {
-                        Text("Item font").frame(width: 120, alignment: .leading)
-                        Text(fontDescription(statusItemFontFamily, statusItemFontTraits))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer()
-                        FontPanelButton(
-                            family: $statusItemFontFamily,
-                            size: $statusItemFontSize,
-                            traits: $statusItemFontTraits
-                        )
-                    }
-
-                    sliderRow("Item size", value: $statusItemFontSize, range: 8...18, unit: "pt")
-                }
-            } header: {
-                Text("Menu bar item")
-            } footer: {
-                Text("Turn off Use title appearance to give the menu bar item its own font and icon.")
-            }
-        }
-    }
-
-    @ViewBuilder
     private var clicking: some View {
         Section {
             Picker("Left click", selection: $leftClickAction) {
@@ -457,15 +400,75 @@ struct SettingsView: View {
     @ViewBuilder
     private var position: some View {
         Section {
-            sliderRow("Gap after menus", value: $gap, range: 0...40, unit: "pt")
+            Picker("Show", selection: placementMode) {
+                ForEach(PlacementMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("Where to show")
+        } footer: {
+            Text("Both can be shown at once. The menu bar item always uses the same title text.")
+        }
+
+        Section {
+            Picker("Position", selection: $panelPosition) {
+                ForEach(PanelPosition.allCases) { mode in
+                    Text(mode.title).tag(mode.rawValue)
+                }
+            }
+
+            if panelPosition == PanelPosition.custom.rawValue {
+                Toggle("Lock position", isOn: $lockPosition)
+                Text("Drag the title to move it. The position is remembered.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            sliderRow("Gap", value: $gap, range: 0...40, unit: "pt")
             sliderRow("Left inset", value: $leftInset, range: 0...600, unit: "pt")
             sliderRow("Max width", value: $maxWidth, range: 80...800, unit: "pt")
         } header: {
-            Text("Automatic placement")
+            Text("Title bar position")
         } footer: {
-            Text("The title follows the front app's menus. It is shortened when the menu bar has no room.")
+            Text("Next to app menus follows the front app's menus. Left and right of notch sit beside the camera housing. Centered centers the title on displays without a notch. Custom position follows the saved drag position and can be locked. On displays without a notch, the notch positions fall back to next to app menus. On a display with a notch, centered does the same.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+
+        if showStatusItem {
+            Section {
+                Toggle("Use title appearance", isOn: $statusItemMirrorsTitle)
+
+                if !statusItemMirrorsTitle {
+                    Picker("Item icon", selection: $statusItemIconStyle) {
+                        ForEach(IconStyle.allCases) { style in
+                            Text(style.title).tag(style.rawValue)
+                        }
+                    }
+
+                    HStack {
+                        Text("Item font").frame(width: 120, alignment: .leading)
+                        Text(fontDescription(statusItemFontFamily, statusItemFontTraits))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        FontPanelButton(
+                            family: $statusItemFontFamily,
+                            size: $statusItemFontSize,
+                            traits: $statusItemFontTraits
+                        )
+                    }
+
+                    sliderRow("Item size", value: $statusItemFontSize, range: 8...18, unit: "pt")
+                }
+            } header: {
+                Text("Menu bar item")
+            } footer: {
+                Text("Turn off Use title appearance to give the menu bar item its own font and icon.")
+            }
         }
     }
 
