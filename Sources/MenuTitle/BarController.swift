@@ -469,6 +469,8 @@ final class BarController: NSObject {
             String(defaults.double(forKey: Pref.letterSpacing)),
             String(defaults.double(forKey: Pref.wordSpacing)),
             defaults.string(forKey: Pref.iconStyle) ?? "",
+            "\(defaults.bool(forKey: Pref.iconSizeLinked))",
+            String(defaults.double(forKey: Pref.iconSize)),
             defaults.string(forKey: Pref.backgroundStyle) ?? "",
             "\(defaults.bool(forKey: Pref.useCustomTextColor))",
             defaults.string(forKey: Pref.textColorHex) ?? "",
@@ -519,6 +521,8 @@ final class BarController: NSObject {
         let fontFamily = defaults.string(forKey: Pref.fontFamily) ?? ""
         let fontTraits = defaults.integer(forKey: Pref.fontTraits)
         let iconStyle = IconStyle(rawValue: defaults.string(forKey: Pref.iconStyle) ?? "") ?? .appFont
+        let iconSizeLinked = defaults.bool(forKey: Pref.iconSizeLinked)
+        let customIconSize = CGFloat(defaults.double(forKey: Pref.iconSize))
         let padding = CGFloat(defaults.double(forKey: Pref.padding))
         let paddingLinked = defaults.bool(forKey: Pref.paddingLinked)
         let paddingLeft = paddingLinked ? padding : CGFloat(defaults.double(forKey: Pref.paddingLeft))
@@ -605,6 +609,7 @@ final class BarController: NSObject {
 
         func makeContent(_ size: CGFloat, _ family: String, _ traits: Int, _ style: IconStyle) -> BarContent {
             let font = FontResolver.font(family: family, size: size, traits: traits)
+            let iconSize = iconSizeLinked ? size + 3 : customIconSize
             var glyph: NSAttributedString?
             var icon: NSImage?
             switch style {
@@ -612,7 +617,7 @@ final class BarController: NSObject {
                 break
             case .appFont:
                 if let character = AppIconFont.shared.glyph(for: info.app) {
-                    let iconFont = AppIconFont.shared.font(size: size + 3) ?? font
+                    let iconFont = AppIconFont.shared.font(size: iconSize) ?? font
                     glyph = NSAttributedString(
                         string: character,
                         attributes: [.font: iconFont, .foregroundColor: textColor]
@@ -627,6 +632,7 @@ final class BarController: NSObject {
                 color: textColor,
                 icon: icon,
                 glyph: glyph,
+                iconSize: iconSize,
                 paddingLeft: paddingLeft,
                 paddingRight: paddingRight,
                 paddingTop: paddingTop,

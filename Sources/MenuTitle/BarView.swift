@@ -7,6 +7,7 @@ struct BarContent {
     var color: NSColor
     var icon: NSImage?
     var glyph: NSAttributedString?
+    var iconSize: CGFloat
     var paddingLeft: CGFloat
     var paddingRight: CGFloat
     var paddingTop: CGFloat
@@ -61,7 +62,8 @@ final class BarView: NSView {
     }
 
     private func iconHeight(forHeight height: CGFloat) -> CGFloat {
-        min(18, height - 8)
+        guard let content else { return 0 }
+        return min(content.iconSize, height - 8)
     }
 
     private func iconWidth(forHeight height: CGFloat) -> CGFloat {

@@ -16,6 +16,8 @@ enum Pref {
     static let leftInset = "leftInset"
     static let maxWidth = "maxWidth"
     static let iconStyle = "iconStyle"
+    static let iconSizeLinked = "iconSizeLinked"
+    static let iconSize = "iconSize"
     static let fontUpdateMode = "fontUpdateMode"
     static let fontInstalledVersion = "fontInstalledVersion"
     static let fontLastCheck = "fontLastCheck"
@@ -71,6 +73,8 @@ enum Pref {
         leftInset: 0.0,
         maxWidth: 360.0,
         iconStyle: IconStyle.appFont.rawValue,
+        iconSizeLinked: true,
+        iconSize: 14.0,
         fontUpdateMode: FontUpdateMode.automatic.rawValue,
         fontInstalledVersion: "",
         fontLastCheck: 0.0,

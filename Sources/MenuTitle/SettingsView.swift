@@ -52,6 +52,8 @@ struct SettingsView: View {
     @AppStorage(Pref.leftInset) private var leftInset = 0.0
     @AppStorage(Pref.maxWidth) private var maxWidth = 360.0
     @AppStorage(Pref.iconStyle) private var iconStyle = IconStyle.appFont.rawValue
+    @AppStorage(Pref.iconSizeLinked) private var iconSizeLinked = true
+    @AppStorage(Pref.iconSize) private var iconSize = 14.0
     @AppStorage(Pref.fontUpdateMode) private var fontUpdateMode = FontUpdateMode.automatic.rawValue
     @AppStorage(Pref.backgroundStyle) private var backgroundStyle = BarBackgroundStyle.liquidGlass.rawValue
     @AppStorage(Pref.useCustomTextColor) private var useCustomTextColor = false
@@ -251,6 +253,12 @@ struct SettingsView: View {
             }
 
             sliderRow("Size", value: $fontSize, range: 8...18, unit: "pt")
+            if iconStyle != IconStyle.none.rawValue {
+                Toggle("Link icon size to text size", isOn: $iconSizeLinked)
+                if !iconSizeLinked {
+                    sliderRow("Icon size", value: $iconSize, range: 8...28, unit: "pt")
+                }
+            }
             Toggle("Link padding", isOn: paddingLinkBinding)
             if paddingLinked {
                 sliderRow("Padding", value: $padding, range: 0...24, unit: "pt")
