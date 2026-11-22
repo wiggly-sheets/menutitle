@@ -45,6 +45,8 @@ enum Pref {
     static let customPosition = "customPosition"
     static let lockPosition = "lockPosition"
     static let panelPosition = "panelPosition"
+    static let notchedPosition = "notchedPosition"
+    static let notNotchedPosition = "notNotchedPosition"
     static let positionXByDisplay = "positionXByDisplay"
     static let positionYByDisplay = "positionYByDisplay"
     static let statusItemMirrorsTitle = "statusItemMirrorsTitle"
@@ -236,6 +238,23 @@ enum PanelPosition: String, CaseIterable, Identifiable {
         case .center: return "Centered"
         case .custom: return "Custom position"
         }
+    }
+
+    /// Positions that make sense on a display with or without a notch.
+    static func options(notched: Bool) -> [PanelPosition] {
+        notched ? [.menus, .notchLeft, .notchRight, .custom] : [.menus, .center, .custom]
+    }
+
+    /// Stored position for the kind of display being shown. Falls back to the
+    /// single old position so existing settings keep working.
+    static func current(notched: Bool, defaults: UserDefaults = .standard) -> PanelPosition {
+        let key = notched ? Pref.notchedPosition : Pref.notNotchedPosition
+        if let raw = defaults.string(forKey: key),
+           let position = PanelPosition(rawValue: raw) {
+            return position
+        }
+        let legacy = current(defaults)
+        return options(notched: notched).contains(legacy) ? legacy : .menus
     }
 
     /// Stored position, falling back to the old custom-position toggle so

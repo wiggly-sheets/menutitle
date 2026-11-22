@@ -85,9 +85,9 @@ struct SettingsView: View {
     @AppStorage(Pref.statusItemLeftClickAction) private var statusItemLeftClickAction = ClickAction.openSettings.rawValue
     @AppStorage(Pref.statusItemMiddleClickAction) private var statusItemMiddleClickAction = ClickAction.none.rawValue
     @AppStorage(Pref.statusItemRightClickAction) private var statusItemRightClickAction = ClickAction.showMenu.rawValue
-    @AppStorage(Pref.customPosition) private var customPosition = false
     @AppStorage(Pref.lockPosition) private var lockPosition = false
-    @AppStorage(Pref.panelPosition) private var panelPosition = PanelPosition.menus.rawValue
+    @AppStorage(Pref.notchedPosition) private var notchedPosition = PanelPosition.menus.rawValue
+    @AppStorage(Pref.notNotchedPosition) private var notNotchedPosition = PanelPosition.menus.rawValue
 
     @State private var pane: SettingsPane? = .appearance
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
@@ -172,12 +172,9 @@ struct SettingsView: View {
             accessibilityTrusted = AXIsProcessTrusted()
             launchAtLogin = LaunchAtLogin.isEnabled
             loginNeedsApproval = LaunchAtLogin.needsApproval
-            // Move an old custom-position toggle into the stored position.
-            panelPosition = PanelPosition.current().rawValue
-        }
-        .onChange(of: panelPosition) { _, raw in
-            // Keep the old toggle in sync so earlier versions read the same choice.
-            customPosition = raw == PanelPosition.custom.rawValue
+            // Move the old single position into the two display kinds.
+            notchedPosition = PanelPosition.current(notched: true).rawValue
+            notNotchedPosition = PanelPosition.current(notched: false).rawValue
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             accessibilityTrusted = AXIsProcessTrusted()
@@ -421,13 +418,20 @@ struct SettingsView: View {
         }
 
         Section {
-            Picker("Position", selection: $panelPosition) {
-                ForEach(PanelPosition.allCases) { mode in
+            Picker("Notched display", selection: $notchedPosition) {
+                ForEach(PanelPosition.options(notched: true)) { mode in
                     Text(mode.title).tag(mode.rawValue)
                 }
             }
 
-            if panelPosition == PanelPosition.custom.rawValue {
+            Picker("Display without a notch", selection: $notNotchedPosition) {
+                ForEach(PanelPosition.options(notched: false)) { mode in
+                    Text(mode.title).tag(mode.rawValue)
+                }
+            }
+
+            if notchedPosition == PanelPosition.custom.rawValue
+                || notNotchedPosition == PanelPosition.custom.rawValue {
                 Toggle("Lock position", isOn: $lockPosition)
                 Text("Drag the title to move it. The position is remembered.")
                     .font(.caption)
@@ -440,7 +444,7 @@ struct SettingsView: View {
         } header: {
             Text("Title bar position")
         } footer: {
-            Text("Next to app menus follows the front app's menus. Left and right of notch sit beside the camera housing. Centered centers the title on displays without a notch. Custom position follows the saved drag position and can be locked. On displays without a notch, the notch positions fall back to next to app menus. On a display with a notch, centered does the same.")
+            Text("Each display uses the position for its kind. Next to app menus follows the front app's menus. Left and right of notch sit beside the camera housing. Centered centers the title on displays without a notch. Custom position follows the drag position saved for each display and can be locked.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

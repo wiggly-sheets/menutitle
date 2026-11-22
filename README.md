@@ -55,7 +55,7 @@ The title moves as menus change width and stops before the notch or the next men
 ### Fits around the menu bar
 
 - Measures where the front app's menus end and places the title after them.
-- Places the title after the app menus, left or right of the notch, centered on a display without a notch, or at a custom position.
+- Places the title after the app menus, left or right of the notch, centered on a display without a notch, or at a custom position. The notched and non-notched positions are set separately.
 - Stops at the MacBook notch.
 - Stops at other menu bar windows, such as always-on-top widgets.
 - Can be dragged anywhere on screen and locked in place.

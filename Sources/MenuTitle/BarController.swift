@@ -253,20 +253,27 @@ final class BarController: NSObject {
         let defaults = UserDefaults.standard
         guard panel.isVisible,
               !view.isDragging,
-              PanelPosition.current(defaults) == .menus,
               let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
               !clampBusy else { return }
-        clampBusy = true
         let gap = CGFloat(defaults.double(forKey: Pref.gap))
         let inset = CGFloat(defaults.double(forKey: Pref.leftInset))
         let screenFrames = NSScreen.screens.map { $0.frame }
+        let menuScreenFrames = NSScreen.screens.filter {
+            PanelPosition.current(
+                notched: MenuBarGeometry.notchBounds(for: $0) != nil,
+                defaults: defaults
+            ) == .menus
+        }.map(\.frame)
+        guard !menuScreenFrames.isEmpty else { return }
+        clampBusy = true
         queue.async { [weak self] in
             let menuBar = MenuBarGeometry.menuBar(pid: pid, timeout: 0.05)
             var endX: CGFloat?
             var screenFrame: NSRect?
             if let menuBar, let primary = screenFrames.first {
                 let point = CGPoint(x: menuBar.anchor.x, y: primary.maxY - menuBar.anchor.y)
-                if let screen = screenFrames.first(where: { $0.contains(point) }) ?? screenFrames.first {
+                if let screen = screenFrames.first(where: { $0.contains(point) }) ?? screenFrames.first,
+                   menuScreenFrames.contains(screen) {
                     endX = menuBar.endX
                     screenFrame = screen
                 }
@@ -309,7 +316,9 @@ final class BarController: NSObject {
     // The destination Space's menus can keep changing after the app activates.
     // Track them for a while, but stop as soon as their width holds steady.
     private func startClampTracking() {
-        guard PanelPosition.current() == .menus else { return }
+        guard NSScreen.screens.contains(where: {
+            PanelPosition.current(notched: MenuBarGeometry.notchBounds(for: $0) != nil) == .menus
+        }) else { return }
         clampUntil = Date().addingTimeInterval(2.5)
         clampTracker.reset()
         guard clampTimer == nil else { return }
@@ -493,8 +502,8 @@ final class BarController: NSObject {
             String(defaults.double(forKey: Pref.maxWidth)),
             "\(defaults.bool(forKey: Pref.showPanel))",
             "\(defaults.bool(forKey: Pref.showStatusItem))",
-            "\(defaults.bool(forKey: Pref.customPosition))",
-            PanelPosition.current(defaults).rawValue,
+            PanelPosition.current(notched: true, defaults: defaults).rawValue,
+            PanelPosition.current(notched: false, defaults: defaults).rawValue,
             "\(defaults.bool(forKey: Pref.lockPosition))",
             displayKey(screen),
             savedPosition(for: positionScreen).map { "\($0.x),\($0.y)" } ?? "",
@@ -512,9 +521,6 @@ final class BarController: NSObject {
 
         let showPanel = defaults.bool(forKey: Pref.showPanel)
         let showStatusItem = defaults.bool(forKey: Pref.showStatusItem)
-        let position = PanelPosition.current(defaults)
-        let customPosition = position == .custom
-        let lockPosition = defaults.bool(forKey: Pref.lockPosition)
 
         let barHeight = MenuBarGeometry.height(for: screen)
         let fontSize = CGFloat(defaults.double(forKey: Pref.fontSize))
@@ -566,6 +572,9 @@ final class BarController: NSObject {
 
         let menuX = max(menuBar.endX + gap + inset, screen.frame.minX + 2)
         let notch = MenuBarGeometry.notchBounds(for: screen)
+        let position = PanelPosition.current(notched: notch != nil, defaults: defaults)
+        let customPosition = position == .custom
+        let lockPosition = defaults.bool(forKey: Pref.lockPosition)
         let obstructionX: CGFloat?
         switch position {
         case .menus:

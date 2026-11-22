@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Icon size setting. The icon follows the text size by default and can be set separately.
 
+### Changed
+- The title bar position is now set separately for displays with a notch and displays without one.
+
 ## [1.1.6] - 2026-11-21
 
 ### Added

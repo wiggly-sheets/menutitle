@@ -106,4 +106,29 @@ final class TitlePlacementTests: XCTestCase {
         defaults.set(PanelPosition.center.rawValue, forKey: Pref.panelPosition)
         XCTAssertEqual(PanelPosition.current(defaults), .center)
     }
+
+    func testOldNotchPositionStillAppliesToNotchedDisplays() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
+        defer { defaults.removePersistentDomain(forName: #function) }
+        defaults.set(PanelPosition.notchRight.rawValue, forKey: Pref.panelPosition)
+        XCTAssertEqual(PanelPosition.current(notched: true, defaults: defaults), .notchRight)
+        XCTAssertEqual(PanelPosition.current(notched: false, defaults: defaults), .menus)
+    }
+
+    func testOldCenterPositionStillAppliesToDisplaysWithoutANotch() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
+        defer { defaults.removePersistentDomain(forName: #function) }
+        defaults.set(PanelPosition.center.rawValue, forKey: Pref.panelPosition)
+        XCTAssertEqual(PanelPosition.current(notched: true, defaults: defaults), .menus)
+        XCTAssertEqual(PanelPosition.current(notched: false, defaults: defaults), .center)
+    }
+
+    func testEachDisplayKindKeepsItsOwnPosition() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: #function))
+        defer { defaults.removePersistentDomain(forName: #function) }
+        defaults.set(PanelPosition.notchLeft.rawValue, forKey: Pref.notchedPosition)
+        defaults.set(PanelPosition.center.rawValue, forKey: Pref.notNotchedPosition)
+        XCTAssertEqual(PanelPosition.current(notched: true, defaults: defaults), .notchLeft)
+        XCTAssertEqual(PanelPosition.current(notched: false, defaults: defaults), .center)
+    }
 }
