@@ -618,7 +618,7 @@ final class BarController: NSObject {
 
         func makeContent(_ size: CGFloat, _ family: String, _ traits: Int, _ style: IconStyle) -> BarContent {
             let font = FontResolver.font(family: family, size: size, traits: traits)
-            let iconSize = iconSizeLinked ? size + 3 : customIconSize
+            let iconSize = iconSizeLinked ? size : customIconSize
             var glyph: NSAttributedString?
             var icon: NSImage?
             switch style {
