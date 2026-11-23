@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-11-23
+
 ### Added
 - Icon size setting. The icon follows the text size by default and can be set separately.
 
