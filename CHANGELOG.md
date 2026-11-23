@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The title bar position is now set separately for displays with a notch and displays without one.
+- The release ships separate disk images for Apple silicon and Intel, with one checksums.txt for both.
 
 ## [1.1.6] - 2026-11-21
 

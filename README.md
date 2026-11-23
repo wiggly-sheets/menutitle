@@ -122,22 +122,22 @@ This taps the repository and installs MenuTitle in one step. Homebrew verifies t
 
 #### Step 1: Download
 
-Download the latest `.dmg` from the [releases page](https://github.com/wiggly-sheets/menutitle/releases/latest).
+Download the disk image for your Mac from the [releases page](https://github.com/wiggly-sheets/menutitle/releases/latest): `MenuTitle-<version>-arm64.dmg` for Apple silicon, `MenuTitle-<version>-x86_64.dmg` for Intel.
 
 #### Step 2: Verify your download (optional but recommended)
 
-Each release includes a matching `.dmg.sha256` checksum file. Download both the `.dmg` and its `.dmg.sha256` file into the same folder, then in Terminal:
+Each release includes a `checksums.txt` file with one line per disk image. Download it next to the disk image, then in Terminal:
 
 ```bash
 cd ~/Downloads
-shasum -a 256 -c MenuTitle-*.dmg.sha256
+shasum -a 256 -c checksums.txt
 ```
 
 A result ending in `OK` means the file matches the published release.
 
 #### Step 3: Install
 
-Open the `.dmg` and drag **MenuTitle** to your Applications folder.
+Open the disk image and drag **MenuTitle** to your Applications folder.
 
 #### Step 4: Open MenuTitle
 
@@ -173,7 +173,7 @@ Your settings stay in place.
 
 ### Updating a manual download
 
-1. Download the latest `.dmg` from the releases page.
+1. Download the disk image for your Mac from the releases page.
 2. Open it and drag **MenuTitle** into Applications.
 3. Choose **Replace** when asked.
 
@@ -206,7 +206,7 @@ cd menutitle
 make run
 ```
 
-`make` prints every target. `make test` runs the changelog check and the test suite. `make app` builds `dist/MenuTitle.app`, and `make verify` checks its architecture, SDK, version, and signature.
+`make` prints every target. `make test` runs the changelog check and the test suite. `make app` builds `dist/MenuTitle-arm64.app` and `dist/MenuTitle-x86_64.app`, and `make verify` checks the architecture, SDK, version, and signature of both.
 
 To build without launching:
 
@@ -228,7 +228,7 @@ git push origin main
 git push origin v1.0.0
 ```
 
-`make release` moves `[Unreleased]` in `CHANGELOG.md` to the version, runs the tests, builds the DMG and its checksum, verifies the bundle, commits the bump, and creates the tag. It never pushes. Pushing the tag starts the release workflow, which publishes `MenuTitle-<version>.dmg` and its `.sha256` file. The Homebrew tap picks up that release.
+`make release` moves `[Unreleased]` in `CHANGELOG.md` to the version, runs the tests, builds both disk images and `checksums.txt`, verifies both bundles, commits the bump, and creates the tag. It never pushes. Pushing the tag starts the release workflow, which publishes `MenuTitle-<version>-arm64.dmg`, `MenuTitle-<version>-x86_64.dmg`, and `checksums.txt`. The Homebrew tap picks up that release.
 
 ---
 
@@ -237,7 +237,6 @@ git push origin v1.0.0
 - macOS 14 or later
 - [yabai](https://github.com/koekeishiya/yabai) running with window titles queryable
 - Accessibility access for MenuTitle
-- Apple Silicon for the published builds
 
 The title is positioned through the Accessibility API. Without access, MenuTitle hides the title rather than guessing.
 
