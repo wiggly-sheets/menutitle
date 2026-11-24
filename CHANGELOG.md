@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The title hides in a native full-screen app when yabai reports the window as not full screen but its Space as full screen.
+
 ## [1.1.7] - 2026-11-23
 
 ### Added
